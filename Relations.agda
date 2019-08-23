@@ -281,8 +281,34 @@ from (x1 bs) = 1 + 2 * from bs
 --
 -- Induction.agda: fromToI : ∀ (n : ℕ) → from(to n) ≡ n
 
+data X0Doubles : ℕ → Set where
+  x0doublesZero : X0Doubles zero
+  x0doubles : ∀ {n : ℕ} → to(n + n) ≡ x0 (to n) → X0Doubles n
 
--- WIP 
+x0≡n+n : ∀ (n : ℕ) → X0Doubles n
+x0≡n+n zero = x0doublesZero
+x0≡n+n (suc n) = x0doubles p where
+  p : inc (to (n + suc n)) ≡ (x0 inc (to n))
+  p rewrite +-suc n n with x0≡n+n n 
+  ...                 | x0doublesZero = refl
+  ...                 | x0doubles q rewrite q = refl
+
+
+-- ==================== WIP ====================
+
+x0forFromOne : ∀ (x : Bin) → One x → to((from x) + (from x)) ≡ x0 (to (from x))
+x0forFromOne x ox = h1 x (from x) refl (x0≡n+n (from x)) ox where
+  h1 : (x : Bin) → (n : ℕ) → from x ≡ n → X0Doubles n → One x → to (from x + from x) ≡ (x0 to (from x))
+  h1 .(x0 _) .0 xn x0doublesZero (binExt0 ox) = {!!}
+  h1 .(x1 nil) n xn (x0doubles x) leading1 = refl
+  h1 .(x0 _) n xn (x0doubles x) (binExt0 ox) = {!!}
+  h1 .(x1 _) n xn (x0doubles x) (binExt1 ox) = {!!}
+
+
+oneToFromI : ∀ (x : Bin) → One x → to(from x) ≡ x
+oneToFromI (x0 x) (binExt0 ox) rewrite +-identityʳ (from x) = {!!}
+oneToFromI (x1 .nil) leading1 = {!!}
+oneToFromI (x1 x) (binExt1 ox) = {!!}
 
 n+n≡2n : ∀ (n : ℕ) → n + n ≡ 2 * n
 n+n≡2n zero = refl
@@ -293,15 +319,3 @@ x0≡*2 x = refl
 
 x0inc : ∀ (x : Bin) → x0 (inc x) ≡ inc (inc (x0 x))
 x0inc _ = refl
-
-x0≡n+n : ∀ (n : ℕ) → 0 < n → to (n + n) ≡ x0 (to n)
-x0≡n+n (suc n) z<s rewrite +-suc n n
-  = {!!}
-
--- NOT QUITE WORKING... :-( --
-
-
-oneToFromI : ∀ (x : Bin) → One x → to(from x) ≡ x
-oneToFromI (x1 nil) leading1 = refl
-oneToFromI (x0 x) (binExt0 ox) rewrite +-identityʳ (from x) = {!!}
-oneToFromI (x1 x) (binExt1 ox) = {!!}
