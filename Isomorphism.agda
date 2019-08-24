@@ -14,7 +14,7 @@ g ∘′ f = λ x → g (f x)
 
 
 postulate
-  extensionatliy : ∀ {A B : Set} {f g : A → B}
+  extensionality : ∀ {A B : Set} {f g : A → B}
     → (∀ (x : A) → f x ≡ g x)
       -----------------------
     → f ≡ g
@@ -31,11 +31,11 @@ same-app m n rewrite +-comm m n = helper m n where
   helper m (suc n) = cong suc (helper m n)
 
 same : _+′_ ≡ _+_
-same = extensionatliy (λ m → extensionatliy (λ n → same-app m n))
+same = extensionality (λ m → extensionality (λ n → same-app m n))
 
 
 postulate
-  ∀-extensionatliy : ∀ {A : Set} {B : A → Set} {f g : (x : A) → B x}
+  ∀-extensionality : ∀ {A : Set} {B : A → Set} {f g : (x : A) → B x}
     → (∀ (x : A) → f x ≡ g x)
       -----------------------
     → f ≡ g
