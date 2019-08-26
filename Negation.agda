@@ -3,7 +3,8 @@ module plfa.Negation where
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym)
 open import Data.Nat using (ℕ; zero; suc)
 open import Data.Empty using (⊥; ⊥-elim)
-open import Data.Sum using (_⊎_; inj₁; inj₂; [_,_]; ⊎-comm)
+open import Data.Sum using (_⊎_; inj₁; inj₂; [_,_])
+open import Data.Sum.Base using (swap)
 open import Data.Product using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
 open import plfa.Isomorphism using (_≃_; extensionality)
@@ -167,12 +168,17 @@ dm→em : (∀ {A B : Set} → ¬ (¬ A × ¬ B) → A ⊎ B) →
 dm→em dm = dm (λ ¬a×¬¬a → (proj₂ ¬a×¬¬a) (proj₁ ¬a×¬¬a))
 
 
--- (II) dne → id → em
+-- (II) dne → id → em (→ dne)
 
 dne→id : (∀ {A : Set} → ¬ ¬ A → A) →
          (∀ {A B : Set} → (A → B) → ¬ A ⊎ B)
-dne→id dne = dne λ f → {!!}
+dne→id dne = λ f → dne (λ g → proj₂ (_≃_.to ⊎-dual-× g) (f (dne (proj₁ (_≃_.to ⊎-dual-× g)))))
 
+id→em : (∀ {A B : Set} → (A → B) → ¬ A ⊎ B) →
+        ∀ {A : Set} → A ⊎ ¬ A
+id→em id = swap (id (λ x → x))
+
+-- (III) dne → pl → em (→ dne)
 
 dne→pl : (∀ {A : Set} → ¬ ¬ A → A) →
          (∀ {A B : Set} → ((A → B) → A) → A)
@@ -184,4 +190,6 @@ dne→pl dne {A} {B} f = A⊎B→A A⊎B where
   A⊎B : A ⊎ B
   A⊎B = dne (λ ¬[A⊎B] → (¬[A⊎B]→¬A ¬[A⊎B]) (f (λ a → ⊥-elim ((¬[A⊎B]→¬A ¬[A⊎B]) a))))
 
-
+pl→em : (∀ {A B : Set} → ((A → B) → A) → A) →
+        (∀ {A : Set} → A ⊎ ¬ A)
+pl→em pl {A} = pl {A ⊎ ¬ A} {⊥} λ f → ⊥-elim (em-irrefutable f)
