@@ -193,3 +193,15 @@ dne→pl dne {A} {B} f = A⊎B→A A⊎B where
 pl→em : (∀ {A B : Set} → ((A → B) → A) → A) →
         (∀ {A : Set} → A ⊎ ¬ A)
 pl→em pl {A} = pl {A ⊎ ¬ A} {⊥} λ f → ⊥-elim (em-irrefutable f)
+
+----------------------------------------------------------------------
+
+Stable : Set → Set
+Stable A = ¬ ¬ A → A
+
+negatedStable : ∀ {A : Set} → Stable (¬ A)
+negatedStable {A} f = ¬¬¬-elim f
+
+×-Stable : ∀ {A B : Set} → Stable A → Stable B → Stable (A × B)
+×-Stable SA SB f = ⟨ SA (λ ¬a → f (¬a ∘ proj₁)) , SB (λ ¬b → f (¬b ∘ proj₂))⟩
+
