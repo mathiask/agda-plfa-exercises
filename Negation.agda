@@ -3,7 +3,7 @@ module plfa.Negation where
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym)
 open import Data.Nat using (ℕ; zero; suc)
 open import Data.Empty using (⊥; ⊥-elim)
-open import Data.Sum using (_⊎_; inj₁; inj₂; [_,_])
+open import Data.Sum using (_⊎_; inj₁; inj₂; [_,_]; ⊎-comm)
 open import Data.Product using (_×_; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
 open import plfa.Isomorphism using (_≃_; extensionality)
@@ -150,10 +150,38 @@ em-irrefutable = λ k → k (inj₂ λ a → k (inj₁ a))
 -- De Morgan: ¬ (¬ A × ¬ B) → A ⊎ B, for all A and B.
 --
 -- To show that they are all equivalent, i.e. they all imply each other,
--- it suffices to show circular implication:
+-- it suffices to show circular implications:
 
-em→dne : ∀ {A : Set} → A ⊎ ¬ A → ¬ ¬ A → A
+-- (I) em → dne → dm → em
+
+em→dne : ∀ {A : Set} → A ⊎ ¬ A →
+         ¬ ¬ A → A
 em→dne a⊎¬a ¬¬a = [ (λ x → x) , (λ ¬a → ⊥-elim (¬¬a ¬a)) ] a⊎¬a
 
-dne→pl : (∀ {A : Set} → ¬ ¬ A → A) → (∀ {A B : Set} → ((A → B) → A) → A)
-dne→pl dne f = {!!}
+dne→dm : (∀ {A : Set} → ¬ ¬ A → A) →
+         (∀ {A B : Set} → ¬ (¬ A × ¬ B) → A ⊎ B)
+dne→dm dne f = dne (λ g → f (_≃_.to ⊎-dual-× g))
+
+dm→em : (∀ {A B : Set} → ¬ (¬ A × ¬ B) → A ⊎ B) →
+        (∀ {A : Set} → A ⊎ ¬ A)
+dm→em dm = dm (λ ¬a×¬¬a → (proj₂ ¬a×¬¬a) (proj₁ ¬a×¬¬a))
+
+
+-- (II) dne → id → em
+
+dne→id : (∀ {A : Set} → ¬ ¬ A → A) →
+         (∀ {A B : Set} → (A → B) → ¬ A ⊎ B)
+dne→id dne = dne λ f → {!!}
+
+
+dne→pl : (∀ {A : Set} → ¬ ¬ A → A) →
+         (∀ {A B : Set} → ((A → B) → A) → A)
+dne→pl dne {A} {B} f = A⊎B→A A⊎B where
+  A⊎B→A : A ⊎ B → A
+  A⊎B→A = λ ab → [ (λ a → a) , (λ b → f (λ _ → b)) ] ab
+  ¬[A⊎B]→¬A : ¬ (A ⊎ B) → ¬ A
+  ¬[A⊎B]→¬A ¬[A⊎B] = proj₁ (_≃_.to ⊎-dual-× ¬[A⊎B])
+  A⊎B : A ⊎ B
+  A⊎B = dne (λ ¬[A⊎B] → (¬[A⊎B]→¬A ¬[A⊎B]) (f (λ a → ⊥-elim ((¬[A⊎B]→¬A ¬[A⊎B]) a))))
+
+
