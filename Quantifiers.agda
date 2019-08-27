@@ -236,24 +236,11 @@ canTo : ∀ (n : ℕ) → Can (toBin n)
 canTo zero = can0
 canTo (suc n) = canInc (canTo n)
 
-one-reverse₀ : ∀ {x : Bin} → One (x0 x) → One x
-one-reverse₀ (binExt0 ox) = ox
-
-one-reverse₁ : ∀ {x : Bin} → One (x1 x) → One x ⊎ x ≡ nil
-one-reverse₁ leading1 = inj₂ refl
-one-reverse₁ (binExt1 oneX) = inj₁ oneX
-
 _≢_ : ∀ {A : Set} → A → A → Set
 x ≢ y  =  ¬ (x ≡ y)
 
 open import Data.Empty using (⊥; ⊥-elim)
 open Eq.≡-Reasoning using (begin_; _≡⟨⟩_; _≡⟨_⟩_; _∎)
-
--- needed?
-n≢0→One : ∀ {n : ℕ} → n ≢ 0 → One (toBin n)
-n≢0→One {n} n≢0 with canTo n
-n≢0→One {zero} n≢0  | x = ⊥-elim (n≢0 refl)
-n≢0→One {suc n} n≢0 | x = canIncOne (canTo n)
 
 emℕ : ∀ {n : ℕ} → n ≡ zero ⊎ n ≢ zero
 emℕ {zero} = inj₁ refl
@@ -314,7 +301,6 @@ toX1 {suc n} = inj₂ (eqCases emℕ) where
       k : n ≡ 0 ⊎ toBin (suc(n + n)) ≡ x1 (toBin n) → toBin (suc(n + n)) ≡ x1 (toBin n)
       k (inj₁ n≡0) = ⊥-elim (n≢0 n≡0)
       k (inj₂ ev) = ev
-
 
 toX1noZero : ∀ {n : ℕ} → One (toBin n) →  toBin (suc(n + n)) ≡ x1 (toBin n)
 toX1noZero {n} OneToBinN = h (toX1 {n}) where
