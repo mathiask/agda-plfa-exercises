@@ -336,6 +336,16 @@ can∃to canX = [ (λ x≡x0 → ⟨ zero , (sym x≡x0) ⟩)
               , (λ oneX → one∃to oneX)
               ] (can0orOne canX)
 
+¬OneX0Nil : ¬ One (x0 nil)
+¬OneX0Nil (binExt0 ())
+
+canUniq : ∀ {x : Bin} → (cx cx′ : Can x) → cx ≡ cx′
+canUniq {x0 .nil} can0 can0 = refl
+canUniq {x0 .nil} can0 (can x) = ⊥-elim (¬OneX0Nil x)
+canUniq {x0 .nil} (can x) can0 = ⊥-elim (¬OneX0Nil x)
+canUniq {x0 x} (can x₁) (can x₂) = cong can {!!}
+canUniq {x1 x} (can x₁) (can x₂) = {!!}
+
 -- The "General Theorem"
 isoOnto : ∀ {A B : Set} {f : A → B} {g : B → A} {P : B → Set}
   → (∀ (a : A) → g (f a) ≡ a)
