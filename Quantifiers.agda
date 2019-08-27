@@ -292,9 +292,37 @@ toX0noZero {n} {x} OneX toBinX≡x = h (toX0 {n}) where
     ¬One0 (binExt0 ())
   h (inj₂ ev) = ev
 
+toX1 : ∀ {n : ℕ} → n ≡ 0 ⊎ toBin (suc(n + n)) ≡ x1 (toBin n)
+toX1 {zero} = inj₁ refl
+toX1 {suc n} = inj₂ (eqCases emℕ) where
+  eqCases : n ≡ zero ⊎ n ≢ zero → toBin (suc (suc n + suc n)) ≡ (x1 toBin (suc n))
+  eqCases (inj₁ n≡0) rewrite n≡0 = refl
+  eqCases (inj₂ n≢0) =
+    begin
+      toBin (suc (suc n + suc n))
+    ≡⟨⟩
+      toBin (suc (suc (n + suc n)))
+    ≡⟨ cong (toBin ∘ suc ∘ suc) (+-suc n n) ⟩
+      toBin (suc (suc (suc (n + n))))
+    ≡⟨⟩
+      inc (inc (toBin (suc (n + n))))
+    ≡⟨ cong (inc ∘ inc) (k (toX1 {n})) ⟩
+      inc (inc (x1 (toBin n)))
+    ≡⟨⟩
+      x1 (toBin (suc n))
+    ∎ where
+      k : n ≡ 0 ⊎ toBin (suc(n + n)) ≡ x1 (toBin n) → toBin (suc(n + n)) ≡ x1 (toBin n)
+      k (inj₁ n≡0) = ⊥-elim (n≢0 n≡0)
+      k (inj₂ ev) = ev
 
-postulate toX1 : ∀ {n : ℕ} → One (toBin n) → toBin (suc(n + n)) ≡ x1 (toBin n)
 
+toX1noZero : ∀ {n : ℕ} → One (toBin n) →  toBin (suc(n + n)) ≡ x1 (toBin n)
+toX1noZero {n} OneToBinN = h (toX1 {n}) where
+  h : n ≡ zero ⊎ toBin (suc(n + n)) ≡ x1 (toBin n) → toBin (suc(n + n)) ≡ x1 (toBin n)
+  h (inj₁ n≡0) = ⊥-elim (¬OneToBinN OneToBinN) where
+    ¬OneToBinN : ¬ One (toBin n)
+    ¬OneToBinN rewrite n≡0 = λ { (binExt0 ())}
+  h (inj₂ ev) = ev
 
 one∃to : ∀ {x : Bin} → One x → ∃[ n ] (toBin n ≡ x)
 one∃to leading1 = ⟨ 1 , refl ⟩
@@ -321,7 +349,7 @@ one∃to {x1 x} (binExt1 oneX) = h (one∃to oneX) where
     eq =
       begin
         toBin (suc (n + n))
-      ≡⟨ toX1 {n} oneToBinN ⟩
+      ≡⟨ toX1noZero {n} oneToBinN ⟩
         x1 (toBin n)
       ≡⟨ cong x1_ toBinN≡X ⟩
         (x1 x)
@@ -376,9 +404,6 @@ toFromOnCan {⟨ x , CanX ⟩} | ⟨ n , n→x ⟩
 -- ⟨⟩≡  : ∀ {A : Set} {B : A → Set} (a : A) (p p' : B a)
 --       → p ≡ p' → _≡_ {0ℓ} {∃[ x ] B x} ⟨ a , p ⟩  ⟨ a , p' ⟩
 -- ⟨⟩≡ x p p' pp' rewrite pp' = refl
-
--- ∃-witness : ∀ {A : Set} {B : A → Set} → (∃[ x ] B x) → A
--- ∃-witness ⟨ w , _ ⟩ = w
 
 -- ∃-evidence : ∀ {A : Set} {B : A → Set} → (f : ∃[ x ] B x) → B (∃-witness f)
 -- ∃-evidence ⟨ _ , e ⟩ = e
