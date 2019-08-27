@@ -336,6 +336,11 @@ can∃to canX = [ (λ x≡x0 → ⟨ zero , (sym x≡x0) ⟩)
               , (λ oneX → one∃to oneX)
               ] (can0orOne canX)
 
+oneUniq : ∀ {x : Bin} → (ox ox′ : One x) → ox ≡ ox′
+oneUniq {x0 x} (binExt0 ox) (binExt0 ox′) = cong binExt0 (oneUniq {x} ox ox′)
+oneUniq {x1 .nil} leading1 leading1 = refl
+oneUniq {x1 x} (binExt1 ox) (binExt1 ox′) = cong binExt1 (oneUniq {x} ox ox′)
+
 ¬OneX0Nil : ¬ One (x0 nil)
 ¬OneX0Nil (binExt0 ())
 
@@ -343,21 +348,31 @@ canUniq : ∀ {x : Bin} → (cx cx′ : Can x) → cx ≡ cx′
 canUniq {x0 .nil} can0 can0 = refl
 canUniq {x0 .nil} can0 (can x) = ⊥-elim (¬OneX0Nil x)
 canUniq {x0 .nil} (can x) can0 = ⊥-elim (¬OneX0Nil x)
-canUniq {x0 x} (can x₁) (can x₂) = cong can {!!}
-canUniq {x1 x} (can x₁) (can x₂) = {!!}
+canUniq {x0 x} (can ox) (can ox′) = cong can (oneUniq ox ox′)
+canUniq {x1 x} (can ox) (can ox′) = cong can (oneUniq ox ox′)
+
+
+-- problems with levels
+-- ⟨⟩≡ : ∀ {ℓ ℓ′} {X : Set ℓ} {Y : Set ℓ′} (x x′ : X) (y y′ : Y) → x ≡ x′ → y ≡ y′ → ⟨ x , y ⟩ ≡ ⟨ x′ , y′ ⟩
+-- ⟨⟩≡ x x y y refl refl = refl
+--
+-- test : ∀ {A : Set} (B : A → Set) (a : A) (p p′ : B a)
+--   → p ≡ p′ → ⟨ a , p ⟩ ≡ ⟨ a , p′ ⟩
+-- test {A} B a a′ p p′ pp = ?
+
 
 -- The "General Theorem"
-isoOnto : ∀ {A B : Set} {f : A → B} {g : B → A} {P : B → Set}
-  → (∀ (a : A) → g (f a) ≡ a)
-  → (∀ (a : A) → P (f a))
-  → (∀ (b : B) → P b → (∃[ a ] (f a ≡ b)))
-    ---------------------------------
-  → A ≃ ∃[ b ] P b
-isoOnto {A} {B} {f} {g} {P} gf Pf onto =
-  record
-    { to      = λ a → ⟨ (f a) , (Pf a) ⟩
-    ; from    = λ {⟨ b , Pb ⟩ → g b}
-    ; from∘to = λ a → gf a
-    ; to∘from = {!!}
-    }
-
+-- isoOnto : ∀ {A B : Set} {f : A → B} {g : B → A} {P : B → Set}
+--   → (∀ (a : A) → g (f a) ≡ a)
+--   → (∀ (a : A) → P (f a))
+--   → (∀ (b : B) → P b → (∃[ a ] (f a ≡ b)))
+--   → (∀ (b : B) (pb pb′ : P b) → pb ≡ pb′)
+--     --------------------------------------
+--   → A ≃ ∃[ b ] P b
+-- isoOnto {A} {B} {f} {g} {P} gf Pf pi onto =
+--   record
+--     { to      = λ a → ⟨ (f a) , (Pf a) ⟩
+--     ; from    = λ {⟨ b , Pb ⟩ → g b}
+--     ; from∘to = λ a → gf a
+--     ; to∘from = λ { ⟨ x , Px ⟩ → {!⟨⟩̄≡ ? ?!}}
+--     } where
