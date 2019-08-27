@@ -351,17 +351,39 @@ canUniq {x0 .nil} (can x) can0 = ⊥-elim (¬OneX0Nil x)
 canUniq {x0 x} (can ox) (can ox′) = cong can (oneUniq ox ox′)
 canUniq {x1 x} (can ox) (can ox′) = cong can (oneUniq ox ox′)
 
+∃-witness : ∀ {A : Set} {B : A → Set} → (∃[ x ] B x) → A
+∃-witness ⟨ w , _ ⟩ = w
 
--- problems with levels
--- ⟨⟩≡ : ∀ {ℓ ℓ′} {X : Set ℓ} {Y : Set ℓ′} (x x′ : X) (y y′ : Y) → x ≡ x′ → y ≡ y′ → ⟨ x , y ⟩ ≡ ⟨ x′ , y′ ⟩
--- ⟨⟩≡ x x y y refl refl = refl
+toFromOnCan : ∀ {x : ∃[ x ] Can x}
+  → ⟨ toBin (fromBin (∃-witness x)) , canTo (fromBin (∃-witness x)) ⟩ ≡ x
+toFromOnCan {⟨ x , CanX ⟩} with can∃to {x} CanX
+toFromOnCan {⟨ x , CanX ⟩} | ⟨ n , n→x ⟩
+  rewrite sym n→x | fromToI n | canUniq {toBin n} (canTo n) CanX = refl
+
+ℕ≡Bin : ℕ ≃ ∃[ x ] Can x
+ℕ≡Bin =
+  record
+    { to      = λ n → ⟨ toBin n , canTo n ⟩
+    ; from    = λ { ⟨ x , CanX ⟩ → fromBin x}
+    ; from∘to = λ n → fromToI n
+    ; to∘from = λ { ⟨ x , CanX ⟩ → toFromOnCan}
+    }
+
+----------------------------------------------------------------------
+
+-- Failed attempt...
 --
--- test : ∀ {A : Set} (B : A → Set) (a : A) (p p′ : B a)
---   → p ≡ p′ → ⟨ a , p ⟩ ≡ ⟨ a , p′ ⟩
--- test {A} B a a′ p p′ pp = ?
+-- ⟨⟩≡  : ∀ {A : Set} {B : A → Set} (a : A) (p p' : B a)
+--       → p ≡ p' → _≡_ {0ℓ} {∃[ x ] B x} ⟨ a , p ⟩  ⟨ a , p' ⟩
+-- ⟨⟩≡ x p p' pp' rewrite pp' = refl
 
+-- ∃-witness : ∀ {A : Set} {B : A → Set} → (∃[ x ] B x) → A
+-- ∃-witness ⟨ w , _ ⟩ = w
 
--- The "General Theorem"
+-- ∃-evidence : ∀ {A : Set} {B : A → Set} → (f : ∃[ x ] B x) → B (∃-witness f)
+-- ∃-evidence ⟨ _ , e ⟩ = e
+
+-- -- The "General Theorem"
 -- isoOnto : ∀ {A B : Set} {f : A → B} {g : B → A} {P : B → Set}
 --   → (∀ (a : A) → g (f a) ≡ a)
 --   → (∀ (a : A) → P (f a))
@@ -369,10 +391,10 @@ canUniq {x1 x} (can ox) (can ox′) = cong can (oneUniq ox ox′)
 --   → (∀ (b : B) (pb pb′ : P b) → pb ≡ pb′)
 --     --------------------------------------
 --   → A ≃ ∃[ b ] P b
--- isoOnto {A} {B} {f} {g} {P} gf Pf pi onto =
---   record
---     { to      = λ a → ⟨ (f a) , (Pf a) ⟩
---     ; from    = λ {⟨ b , Pb ⟩ → g b}
---     ; from∘to = λ a → gf a
---     ; to∘from = λ { ⟨ x , Px ⟩ → {!⟨⟩̄≡ ? ?!}}
---     } where
+-- isoOnto {A} {B} {f} {g} {P} gf Pf onto pi = a where
+--   a = record
+--       { to      = λ a → ⟨ (f a) , (Pf a) ⟩
+--       ; from    = λ {⟨ b , Pb ⟩ → g b}
+--       ; from∘to = λ a → gf a
+--       ; to∘from = λ {⟨ b , Pb ⟩ →  {!!}}
+--       }
