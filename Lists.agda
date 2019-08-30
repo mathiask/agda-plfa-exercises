@@ -86,4 +86,20 @@ reverse-++-commute {A} {x ∷ xs} {ys} =
      reverse ys ++ reverse xs ++ [ x ]
   ∎
 
+reverse-involutive : ∀ {A : Set} → {xs : List A} → reverse (reverse xs) ≡ xs
+reverse-involutive {A} {[]} = refl
+reverse-involutive {A} {x ∷ xs} =
+  begin
+    reverse (reverse xs ++ [ x ])
+  ≡⟨ reverse-++-commute {A} {reverse xs} {[ x ]} ⟩
+    reverse [ x ] ++ reverse (reverse xs)
+  ≡⟨ cong ((reverse [ x ] ) ++_) (reverse-involutive {A} {xs}) ⟩
+    reverse [ x ] ++ xs
+  ≡⟨⟩
+    [ x ] ++ xs
+  ≡⟨⟩
+    x ∷ xs
+  ∎
+
+
 --
