@@ -125,7 +125,6 @@ map-compose′ f g (x ∷ xs) =
     map g (map f (x ∷ xs))
   ∎
 
-
 map-compose : ∀ {A B C : Set} {f : A → B} {g : B → C}
   → map (g ∘ f) ≡ map g ∘ map f
 map-compose {A} {B} {C} {f} {g} = extensionality (map-compose′ {A} {B} {C} f g)
@@ -139,5 +138,55 @@ map-++-commute {A} {B} {f} {x ∷ xs} {ys} =
   ≡⟨ cong (f x ∷_) (map-++-commute {A} {B} {f} {xs} {ys}) ⟩
     f x ∷ map f xs ++ map f ys
   ∎
+
+----------------------------------------------------------------------
+
+data Tree (A B : Set) : Set where
+  leaf : A → Tree A B
+  node : Tree A B → B → Tree A B → Tree A B
+
+map-Tree : ∀ {A B C D : Set}
+    → (A → C) → (B → D) → Tree A B → Tree C D
+map-Tree f g (leaf x) = leaf (f x)
+map-Tree f g (node tₗ x tᵣ) = node (map-Tree f g tₗ) (g x) (map-Tree f g tᵣ)
+
+foldr : ∀ {A B : Set} → (A → B → B) → B → List A → B
+foldr _⊗_ e []        =  e
+foldr _⊗_ e (x ∷ xs)  =  x ⊗ foldr _⊗_ e xs
+
+product : List ℕ → ℕ
+product = foldr _*_ 1
+
+foldr-++ : ∀ {A B : Set} (_⊗_ : A → B → B) (e : B) (xs ys : List A) →
+  foldr _⊗_ e (xs ++ ys) ≡ foldr _⊗_ (foldr _⊗_ e ys) xs
+
+foldr-++ _⊗_ e [] ys = refl
+foldr-++ _⊗_ e (x ∷ xs) ys =
+  begin
+    (x ⊗ foldr _⊗_ e (xs ++ ys))
+  ≡⟨ cong (x ⊗_) (foldr-++ _⊗_ e xs ys)  ⟩
+    (x ⊗ foldr _⊗_ (foldr _⊗_ e ys) xs)
+  ∎
+
+map-is-foldr : ∀ {A B : Set} {f : A → B} →
+  map f ≡ foldr (λ x xs → f x ∷ xs) []
+map-is-foldr {A} {B} {f} = extensionality h where
+  h : ∀ (xs : List A) → (map f) xs ≡ foldr (λ x xs → f x ∷ xs) [] xs
+  h [] = refl
+  h (x ∷ xs) =
+    begin
+      map f (x ∷ xs)
+    ≡⟨⟩
+      (f x) ∷ map f xs
+    ≡⟨ cong (f x ∷_) (h xs) ⟩
+      (f x) ∷ foldr (λ x xs → f x ∷ xs) [] xs
+    ≡⟨⟩
+      foldr (λ x' → (f x') ∷_ ) [] (x ∷ xs)
+    ∎
+
+fold-Tree : ∀ {A B C : Set}
+  → (A → C) → (C → B → C → C) → Tree A B → C
+fold-Tree f g (leaf x) = f x
+fold-Tree f g (node tₗ x tᵣ) = g (fold-Tree f g tₗ) x (fold-Tree f g tᵣ)
 
 --
