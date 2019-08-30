@@ -12,3 +12,78 @@ open import Data.Product using (_×_; ∃; ∃-syntax) renaming (_,_ to ⟨_,_�
 open import Function using (_∘_)
 open import Level using (Level)
 open import plfa.Isomorphism using (_≃_; _⇔_)
+
+data List (A : Set) : Set where
+  []  : List A
+  _∷_ : A → List A → List A
+
+infixr 5 _∷_
+
+{-# BUILTIN LIST List #-}
+
+pattern [_] z = z ∷ []
+pattern [_,_] y z = y ∷ z ∷ []
+pattern [_,_,_] x y z = x ∷ y ∷ z ∷ []
+pattern [_,_,_,_] w x y z = w ∷ x ∷ y ∷ z ∷ []
+pattern [_,_,_,_,_] v w x y z = v ∷ w ∷ x ∷ y ∷ z ∷ []
+pattern [_,_,_,_,_,_] u v w x y z = u ∷ v ∷ w ∷ x ∷ y ∷ z ∷ []
+
+infixr 5 _++_
+_++_ : ∀ {A : Set} → List A → List A → List A
+[] ++ ys       = ys
+(x ∷ xs) ++ ys = x ∷ (xs ++ ys)
+
+reverse : ∀ {A : Set} → List A → List A
+reverse [] = []
+reverse (x ∷ xs) = (reverse xs) ++ [ x ]
+
+++-identitlyˡ : ∀ {A : Set} → (xs : List A) → [] ++ xs ≡ xs
+++-identitlyˡ _ = refl
+
+++-identitlyʳ : ∀ {A : Set} → (xs : List A) → xs ++ [] ≡ xs
+++-identitlyʳ [] = refl
+++-identitlyʳ (x ∷ xs) =
+  begin
+    x ∷ xs ++ []
+  ≡⟨⟩
+    x ∷ (xs ++ [])
+  ≡⟨ cong (x ∷_) (++-identitlyʳ xs) ⟩
+    x ∷ xs
+  ∎
+
+++-assoc : ∀ {A : Set} → (xs ys zs : List A) → (xs ++ ys) ++ zs ≡ xs ++ ys ++ zs
+++-assoc [] ys zs = refl
+++-assoc (x ∷ xs) ys zs =
+  begin
+    ((x ∷ xs) ++ ys) ++ zs
+  ≡⟨⟩
+    x ∷ ((xs ++ ys) ++ zs)
+  ≡⟨ cong (x ∷_) (++-assoc xs ys zs) ⟩
+    x ∷ (xs ++ ys ++ zs)
+  ≡⟨⟩
+    (x ∷ xs) ++ ys ++ zs
+  ∎
+
+reverse-[] : {A : Set} → reverse {A} [] ≡ []
+reverse-[] = refl
+
+reverse-++-commute : ∀ {A : Set} → {xs ys : List A}
+  → reverse (xs ++ ys) ≡ reverse ys ++ reverse xs
+reverse-++-commute {A} {[]} {ys} =
+  begin
+    reverse ([] ++ ys)
+  ≡⟨⟩
+    (reverse ys)
+  ≡⟨ sym (++-identitlyʳ (reverse ys)) ⟩
+    reverse ys ++ reverse []
+  ∎
+reverse-++-commute {A} {x ∷ xs} {ys} =
+  begin
+    reverse (xs ++ ys) ++ [ x ]
+  ≡⟨ cong (_++ [ x ]) (reverse-++-commute {A} {xs} {ys}) ⟩
+    (reverse ys ++ reverse xs) ++ [ x ]
+  ≡⟨ ++-assoc (reverse ys) (reverse xs) [ x ] ⟩
+     reverse ys ++ reverse xs ++ [ x ]
+  ∎
+
+--
