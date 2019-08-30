@@ -64,6 +64,8 @@ reverse (x ∷ xs) = (reverse xs) ++ [ x ]
     (x ∷ xs) ++ ys ++ zs
   ∎
 
+----------------------------------------------------------------------
+
 reverse-[] : {A : Set} → reverse {A} [] ≡ []
 reverse-[] = refl
 
@@ -100,6 +102,33 @@ reverse-involutive {A} {x ∷ xs} =
   ≡⟨⟩
     x ∷ xs
   ∎
+
+----------------------------------------------------------------------
+
+map : ∀ {A B : Set} → (A → B) → List A → List B
+map f []        =  []
+map f (x ∷ xs)  =  f x ∷ map f xs
+
+open import plfa.Isomorphism using (extensionality)
+
+map-compose′ : ∀ {A B C : Set} (f : A → B) (g : B → C) (xs : List A)
+  → map (g ∘ f) xs ≡ map g ((map f) xs)
+map-compose′ _ _ [] = refl
+map-compose′ f g (x ∷ xs) =
+  begin
+    (g ∘ f) x ∷ map (g ∘ f) xs
+  ≡⟨ cong (g (f x) ∷_) (map-compose′ f g xs) ⟩
+    (g ∘ f) x ∷ map g ((map f) xs)
+  ≡⟨⟩
+    map g (f x ∷ (map f) xs)
+  ≡⟨⟩
+    map g (map f (x ∷ xs))
+  ∎
+
+
+map-compose : ∀ {A B C : Set} {f : A → B} {g : B → C}
+  → map (g ∘ f) ≡ map g ∘ map f
+map-compose {A} {B} {C} {f} {g} = extensionality (map-compose′ {A} {B} {C} f g)
 
 
 --
