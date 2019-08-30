@@ -130,5 +130,14 @@ map-compose : ∀ {A B C : Set} {f : A → B} {g : B → C}
   → map (g ∘ f) ≡ map g ∘ map f
 map-compose {A} {B} {C} {f} {g} = extensionality (map-compose′ {A} {B} {C} f g)
 
+map-++-commute : ∀ {A B : Set} {f : A → B} {xs ys : List A}
+   →  map f (xs ++ ys) ≡ map f xs ++ map f ys
+map-++-commute {A} {B} {f} {[]} = refl
+map-++-commute {A} {B} {f} {x ∷ xs} {ys} =
+  begin
+    f x ∷ map f (xs ++ ys)
+  ≡⟨ cong (f x ∷_) (map-++-commute {A} {B} {f} {xs} {ys}) ⟩
+    f x ∷ map f xs ++ map f ys
+  ∎
 
 --
