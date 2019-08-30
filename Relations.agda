@@ -296,19 +296,19 @@ x0≡n+n (suc n) = x0doubles p where
 
 -- ==================== WIP ====================
 
-x0forFromOne : ∀ (x : Bin) → One x → to((from x) + (from x)) ≡ x0 (to (from x))
-x0forFromOne x ox = h1 x (from x) refl (x0≡n+n (from x)) ox where
-  h1 : (x : Bin) → (n : ℕ) → from x ≡ n → X0Doubles n → One x → to (from x + from x) ≡ (x0 to (from x))
-  h1 .(x0 _) .0 xn x0doublesZero (binExt0 ox) = {!!}
-  h1 .(x1 nil) n xn (x0doubles x) leading1 = refl
-  h1 .(x0 _) n xn (x0doubles x) (binExt0 ox) = {!!}
-  h1 .(x1 _) n xn (x0doubles x) (binExt1 ox) = {!!}
+-- x0forFromOne : ∀ (x : Bin) → One x → to((from x) + (from x)) ≡ x0 (to (from x))
+-- x0forFromOne x ox = h1 x (from x) refl (x0≡n+n (from x)) ox where
+--   h1 : (x : Bin) → (n : ℕ) → from x ≡ n → X0Doubles n → One x → to (from x + from x) ≡ (x0 to (from x))
+--   h1 .(x0 _) .0 xn x0doublesZero (binExt0 ox) = {!!}
+--   h1 .(x1 nil) n xn (x0doubles x) leading1 = refl
+--   h1 .(x0 _) n xn (x0doubles x) (binExt0 ox) = {!!}
+--   h1 .(x1 _) n xn (x0doubles x) (binExt1 ox) = {!!}
 
 
-oneToFromI : ∀ (x : Bin) → One x → to(from x) ≡ x
-oneToFromI (x0 x) (binExt0 ox) rewrite +-identityʳ (from x) = {!!}
-oneToFromI (x1 .nil) leading1 = {!!}
-oneToFromI (x1 x) (binExt1 ox) = {!!}
+-- oneToFromI : ∀ (x : Bin) → One x → to(from x) ≡ x
+-- oneToFromI (x0 x) (binExt0 ox) rewrite +-identityʳ (from x) = {!!}
+-- oneToFromI (x1 .nil) leading1 = {!!}
+-- oneToFromI (x1 x) (binExt1 ox) = {!!}
 
 n+n≡2n : ∀ (n : ℕ) → n + n ≡ 2 * n
 n+n≡2n zero = refl
