@@ -9,7 +9,8 @@ open import Data.Nat.Properties using
   (+-assoc; +-identityˡ; +-identityʳ; *-assoc; *-identityˡ; *-identityʳ;
     *-distribʳ-+; +-suc; +-*-suc; *-comm)
 open import Relation.Nullary using (¬_; Dec; yes; no)
-open import Data.Product using (_×_; ∃; ∃-syntax) renaming (_,_ to ⟨_,_⟩)
+open import Data.Product using (_×_; ∃; ∃-syntax; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
+open import Data.Sum using (_⊎_; inj₁; inj₂) renaming ([_,_] to case[_,_])
 open import Function using (_∘_)
 open import Level using (Level)
 open import plfa.Isomorphism using (_≃_; _⇔_)
@@ -358,6 +359,107 @@ foldr≡foldl-monoid _⊗_ e monoid-⊗ (x ∷ xs) =
     foldr _⊗_ e (x ∷ xs)
   ∎
 
+----------------------------------------------------------------------
 
+data All {A : Set} (P : A → Set) : List A → Set where
+  []  : All P []
+  _∷_ : ∀ {x : A} {xs : List A} → P x → All P xs → All P (x ∷ xs)
+
+data Any {A : Set} (P : A → Set) : List A → Set where
+  here  : ∀ {x : A} {xs : List A} → P x → Any P (x ∷ xs)
+  there : ∀ {x : A} {xs : List A} → Any P xs → Any P (x ∷ xs)
+
+infix 4 _∈_ _∉_
+
+_∈_ : ∀ {A : Set} (x : A) (xs : List A) → Set
+x ∈ xs = Any (x ≡_) xs
+
+_∉_ : ∀ {A : Set} (x : A) (xs : List A) → Set
+x ∉ xs = ¬ (x ∈ xs)
+
+postulate -- s. PLFA
+  All-++-⇔ : ∀ {A : Set} {P : A → Set} (xs ys : List A)
+    → All P (xs ++ ys) ⇔ (All P xs × All P ys)
+
+
+Any-++-⇔ : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+  Any P (xs ++ ys) ⇔ (Any P xs ⊎ Any P ys)
+Any-++-⇔ xs ys =
+  record
+    { to   = to xs ys
+    ; from = from xs ys
+    }
+  where
+  to : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+    Any P (xs ++ ys) → (Any P xs ⊎ Any P ys)
+  to [] ys Pys = inj₂ Pys
+  to (x ∷ xs) ys (here Px) = inj₁ (here Px)
+  to (x ∷ xs) ys (there Pxs++ys) = case[ (inj₁ ∘ there ) , inj₂ ] (to xs ys Pxs++ys)
+  -- alternatively:
+  -- to (x ∷ xs) ys (there Pxs++ys) with to xs ys Pxs++ys
+  -- ...                            | inj₁ Pxs = inj₁ (there Pxs)
+  -- ...                            | inj₂ Pys = inj₂ Pys
+
+  from : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+    (Any P xs ⊎ Any P ys) → Any P (xs ++ ys)
+  from [] ys (inj₂ Pys) = Pys
+  from (x ∷ xs) ys (inj₁ Px∷xs) with Px∷xs
+  ...                           | here Px = here Px
+  ...                           | there Pxs = there (from xs ys (inj₁ Pxs))
+  from (x ∷ xs) ys (inj₂ Pys) = there (from xs ys (inj₂ Pys))
+
+
+-- extracted from the postulate above
+
+All-to : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+    All P (xs ++ ys) → (All P xs × All P ys)
+All-to [] ys Pys = ⟨ [] , Pys ⟩
+All-to (x ∷ xs) ys (Px ∷ Pxs++ys) =
+  ⟨ Px ∷ (proj₁ (All-to xs ys Pxs++ys)) , (proj₂ (All-to xs ys Pxs++ys)) ⟩
+-- with clauses are tricky in ≡ proofs
+-- All-to (x ∷ xs) ys (Px ∷ Pxs++ys) with All-to xs ys Pxs++ys
+-- ... | ⟨ Pxs , Pys ⟩ = ⟨ Px ∷ Pxs , Pys ⟩
+
+All-from : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+  All P xs × All P ys → All P (xs ++ ys)
+All-from [] ys ⟨ [] , Pys ⟩ = Pys
+All-from (x ∷ xs) ys ⟨ Px ∷ Pxs , Pys ⟩ =  Px ∷ All-from xs ys ⟨ Pxs , Pys ⟩
+
+All-from∘to : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+  (Pxs++ys : All P (xs ++ ys)) → All-from xs ys (All-to xs ys Pxs++ys) ≡ Pxs++ys
+All-from∘to [] ys Pxs++ys = refl
+All-from∘to {A} {P} (x ∷ xs) ys (Px ∷ Pxs++ys) = cong (Px ∷_) h where
+  h : All-from xs ys
+        ⟨ Data.Product.proj₁ (All-to {A} {P} xs ys Pxs++ys) ,
+        Data.Product.proj₂ (All-to xs ys Pxs++ys) ⟩
+      ≡ Pxs++ys
+  h =
+    begin
+      All-from xs ys
+      ⟨ Data.Product.proj₁ (All-to xs ys Pxs++ys) ,
+      Data.Product.proj₂ (All-to xs ys Pxs++ys) ⟩
+    ≡⟨⟩
+      All-from xs ys (All-to xs ys Pxs++ys)
+    ≡⟨ All-from∘to xs ys Pxs++ys ⟩
+      Pxs++ys
+    ∎
+
+All-to∘from : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
+  (PxPy : All P xs × All P ys) → All-to xs ys (All-from xs ys PxPy) ≡ PxPy
+All-to∘from [] ys ⟨ [] , Pys ⟩ = refl
+All-to∘from (x ∷ xs) ys ⟨ Px ∷ Pxs , Pys ⟩ rewrite All-to∘from xs ys ⟨ Pxs , Pys ⟩
+  = refl
+
+All-++-≃ : ∀ {A : Set} {P : A → Set} (xs ys : List A)
+  → All P (xs ++ ys) ≃ (All P xs × All P ys)
+All-++-≃ xs ys =
+  record
+    { to   = All-to xs ys
+    ; from = All-from xs ys
+    ; from∘to = All-from∘to xs ys
+    ; to∘from = All-to∘from xs ys
+    }
+
+-- the same for "Any" is rather tricky.
 
 --
