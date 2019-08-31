@@ -6,7 +6,8 @@ open Eq.≡-Reasoning
 open import Data.Bool using (Bool; true; false; T; _∧_; _∨_; not)
 open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_; _≤_; s≤s; z≤n)
 open import Data.Nat.Properties using
-  (+-assoc; +-identityˡ; +-identityʳ; *-assoc; *-identityˡ; *-identityʳ)
+  (+-assoc; +-identityˡ; +-identityʳ; *-assoc; *-identityˡ; *-identityʳ;
+    *-distribʳ-+; +-suc; +-*-suc; *-comm)
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Data.Product using (_×_; ∃; ∃-syntax) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
@@ -188,5 +189,76 @@ fold-Tree : ∀ {A B C : Set}
   → (A → C) → (C → B → C → C) → Tree A B → C
 fold-Tree f g (leaf x) = f x
 fold-Tree f g (node tₗ x tᵣ) = g (fold-Tree f g tₗ) x (fold-Tree f g tᵣ)
+
+map-is-fold-Tree : ∀ {A B C D : Set} (f : A → C) (g : B → D) (t : Tree A B) →
+  map-Tree f g t ≡ fold-Tree (leaf ∘ f) (λ tₗ x tᵣ → node tₗ (g x) tᵣ) t
+map-is-fold-Tree f g (leaf x) = refl
+map-is-fold-Tree f g (node tₗ x tᵣ) =
+  begin
+    node (map-Tree f g tₗ) (g x) (map-Tree f g tᵣ)
+  ≡⟨ cong (\xx → node xx (g x) (map-Tree f g tᵣ)) (map-is-fold-Tree f g tₗ) ⟩
+    node
+      (fold-Tree (leaf ∘ f) (λ tₗ′ x₁ tᵣ′ → node tₗ′ (g x₁) tᵣ′) tₗ)
+      (g x)
+      (map-Tree f g tᵣ)
+  ≡⟨ cong
+       (λ xx →
+          node (fold-Tree (leaf ∘ f) (λ tₗ′ x₁ tᵣ′ → node tₗ′ (g x₁) tᵣ′) tₗ)
+          (g x) xx)
+       ((map-is-fold-Tree f g tᵣ)) ⟩
+    node
+      (fold-Tree (leaf ∘ f) (λ tₗ′ x₁ tᵣ′ → node tₗ′ (g x₁) tᵣ′) tₗ)
+      (g x)
+      (fold-Tree (leaf ∘ f) (λ tₗ′ x₁ tᵣ′ → node tₗ′ (g x₁) tᵣ′) tᵣ)
+  ∎
+
+downFrom : ℕ → List ℕ
+downFrom zero     =  []
+downFrom (suc n)  =  n ∷ downFrom n
+
+sum : List ℕ → ℕ
+sum = foldr _+_ 0
+
+sum-downFrom : ∀ (n : ℕ) → sum (downFrom n) * 2 ≡ n * (n ∸ 1)
+sum-downFrom zero = refl
+sum-downFrom (suc n) =
+  begin
+    sum (n ∷ downFrom n) * 2
+  ≡⟨⟩
+    (n + sum (downFrom n)) * 2
+  ≡⟨ *-distribʳ-+ 2 n (sum (downFrom n)) ⟩
+    (n * 2 + (sum (downFrom n)) * 2)
+  ≡⟨ cong (λ x → n * 2 + x) (sum-downFrom n) ⟩
+    n * 2 + (n * (n ∸ 1))
+  ≡⟨ h n ⟩
+    n + n * n
+  ≡⟨⟩
+    (suc n) * (suc n ∸ 1)
+  ∎ where -- looking a tad too complicated...
+    k : ∀ (n : ℕ) → n * 2 ≡ n + n
+    k n rewrite *-comm n 2 = cong (n +_) (+-identityʳ n)
+    h : ∀ (n : ℕ) → n * 2 + (n * (n ∸ 1)) ≡ n + n * n
+    h zero = refl
+    h (suc n) =
+      begin
+        (suc n) * 2 + ((suc n) * ((suc n) ∸ 1))
+      ≡⟨⟩
+        suc (suc (n * 2 + (n + n * n)))
+      ≡⟨ cong (λ x → suc (suc (x + (n + n * n)))) (k n) ⟩
+        suc (suc (n + n + (n + n * n)))
+      ≡˘⟨ cong (λ x → suc (suc (n + n + x))) (+-*-suc n n) ⟩
+        suc (suc (n + n + (n * suc n)))
+      ≡⟨ cong (suc ∘ suc) (+-assoc n n (n * suc n)) ⟩
+        suc (suc (n + (n + (n * suc n))))
+      ≡˘⟨ cong suc (+-suc n (n + n * suc n)) ⟩
+        suc (n + suc (n + n * suc n))
+      ≡⟨⟩
+        (suc n) + (suc n) * (suc n)
+      ∎
+
+
+
+----------------------------------------------------------------------
+
 
 --
