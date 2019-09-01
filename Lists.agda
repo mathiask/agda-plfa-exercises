@@ -1,7 +1,7 @@
 module plfa.Lists where
 
 import Relation.Binary.PropositionalEquality as Eq
-open Eq using (_≡_; refl; sym; trans; cong)
+open Eq using (_≡_; refl; sym; trans; cong; subst)
 open Eq.≡-Reasoning
 open import Data.Bool using (Bool; true; false; T; _∧_; _∨_; not)
 open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_; _≤_; s≤s; z≤n)
@@ -14,6 +14,9 @@ open import Data.Sum using (_⊎_; inj₁; inj₂) renaming ([_,_] to case[_,_])
 open import Function using (_∘_)
 open import Level using (Level)
 open import plfa.Isomorphism using (_≃_; _⇔_)
+
+open import Data.Empty using (⊥; ⊥-elim)
+
 
 data List (A : Set) : Set where
   []  : List A
@@ -393,7 +396,7 @@ Any-++-⇔ xs ys =
   to : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
     Any P (xs ++ ys) → (Any P xs ⊎ Any P ys)
   to [] ys Pys = inj₂ Pys
-  to (x ∷ xs) ys (here Px) = inj₁ (here Px)
+  to (x ∷ xs) _ (here Px) = inj₁ (here Px)
   to (x ∷ xs) ys (there Pxs++ys) = case[ (inj₁ ∘ there ) , inj₂ ] (to xs ys Pxs++ys)
   -- alternatively:
   -- to (x ∷ xs) ys (there Pxs++ys) with to xs ys Pxs++ys
@@ -430,14 +433,14 @@ All-from∘to : ∀ {A : Set} {P : A → Set} (xs ys : List A) →
 All-from∘to [] ys Pxs++ys = refl
 All-from∘to {A} {P} (x ∷ xs) ys (Px ∷ Pxs++ys) = cong (Px ∷_) h where
   h : All-from xs ys
-        ⟨ Data.Product.proj₁ (All-to {A} {P} xs ys Pxs++ys) ,
-        Data.Product.proj₂ (All-to xs ys Pxs++ys) ⟩
+        ⟨ proj₁ (All-to {A} {P} xs ys Pxs++ys) ,
+        proj₂ (All-to xs ys Pxs++ys) ⟩
       ≡ Pxs++ys
   h =
     begin
       All-from xs ys
-      ⟨ Data.Product.proj₁ (All-to xs ys Pxs++ys) ,
-      Data.Product.proj₂ (All-to xs ys Pxs++ys) ⟩
+      ⟨ proj₁ (All-to xs ys Pxs++ys) ,
+      proj₂ (All-to xs ys Pxs++ys) ⟩
     ≡⟨⟩
       All-from xs ys (All-to xs ys Pxs++ys)
     ≡⟨ All-from∘to xs ys Pxs++ys ⟩
@@ -461,5 +464,120 @@ All-++-≃ xs ys =
     }
 
 -- the same for "Any" is rather tricky.
+
+_∘′_ : ∀ {ℓ₁ ℓ₂ ℓ₃ : Level} {A : Set ℓ₁} {B : Set ℓ₂} {C : Set ℓ₃}
+  → (B → C) → (A → B) → A → C
+(g ∘′ f) x  =  g (f x)
+
+assimilation : ∀ {A : Set} (¬x ¬x′ : ¬ A) → ¬x ≡ ¬x′
+assimilation ¬x ¬x′ = extensionality (λ x → ⊥-elim (¬x x))
+
+¬Any≃All¬ : ∀ {A : Set} (P : A → Set) (xs : List A)
+  → (¬_ ∘′ Any P) xs ≃ All (¬_ ∘′ P) xs
+¬Any≃All¬ {A} P xs =
+  record
+    { to   = to xs
+    ; from = from xs
+    ; from∘to = fromTo xs
+    ; to∘from = toFrom xs
+    }
+  where
+  to : ∀ (xs : List A) → (¬_ ∘′ Any P) xs → All (¬_ ∘′ P) xs
+  to [] _ = []
+  to (x ∷ xs) ¬AnyPxs = (λ Px → ¬AnyPxs (here Px)) ∷
+                                to xs (λ AnyPxs → ¬AnyPxs (there AnyPxs))
+
+  from : ∀ (xs : List A) → All (¬_ ∘′ P) xs → (¬_ ∘′ Any P) xs
+  from [] [] = λ ()
+  from (x ∷ xs) (¬Px ∷ All¬Pxs) = λ { (here Px) → ¬Px Px
+                                    ; (there AnyPxs) → from xs All¬Pxs AnyPxs}
+
+  fromTo : ∀ (xs : List A) → (p : (¬_ ∘′ Any P) xs) → from xs (to xs p) ≡ p
+  fromTo xs p =  assimilation (from xs (to xs p)) p
+
+  toFrom : ∀ (xs : List A) → (p : All (¬_ ∘′ P) xs) → to xs (from xs p) ≡ p
+  toFrom [] [] = refl
+  toFrom (x ∷ xs) (¬Px ∷ All¬Pxs) =
+    begin
+      (λ Px → ¬Px Px) ∷ to xs (λ AnyPxs → from xs All¬Pxs AnyPxs)
+    ≡⟨⟩
+      ¬Px ∷ to xs (from xs All¬Pxs)
+    ≡⟨ cong (¬Px ∷_) (toFrom xs All¬Pxs) ⟩
+      ¬Px ∷ All¬Pxs
+    ∎
+
+
+-- The following only holds CLASSICALLY as All P [x , y] ≃  P x × P y:
+--                                 BUT Any (¬ P) [x , y] ≃ ¬ P x ⊎ ¬ P y
+-- postulate
+--   ¬All≃Any¬ : ∀ {A : Set} (P : A → Set) (xs : List A)
+--     → (¬_ ∘′ All P) xs ≃ Any (¬_ ∘′ P) xs
+
+----------------------------------------------------------------------
+
+all : ∀ {A : Set} → (A → Bool) → List A → Bool
+all p = foldr _∧_ true ∘ map p
+
+Decidable : ∀ {A : Set} → (A → Set) → Set
+Decidable {A} P = ∀ (x : A) → Dec (P x)
+
+All? : ∀ {A : Set} {P : A → Set} → Decidable P → Decidable (All P)
+All? P? []                              = yes []
+All? P? (x ∷ xs) with P? x | All? P? xs
+...               | yes Px | yes Pxs    = yes (Px ∷ Pxs)
+...               | no ¬Px | _          = no (λ { (Px ∷ Pxs) → ¬Px Px})
+...               | _      | no ¬Pxs    = no (λ { (Px ∷ Pxs) → ¬Pxs Pxs})
+
+any : ∀ {A : Set} → (A → Bool) → List A → Bool
+any p = foldr _∨_ false ∘ map p
+
+Any? : ∀ {A : Set} {P : A → Set} → Decidable P → Decidable (Any P)
+Any? P? []                              = no (λ ())
+Any? P? (x ∷ xs) with P? x | Any? P? xs
+...               | yes Px | _          = yes (here Px)
+...               | _      | yes Pxs    = yes (there Pxs)
+...               | no ¬Px | no ¬Pxs    = no (λ { (here Px)   → ¬Px Px
+                                                ; (there Pxs) → ¬Pxs Pxs})
+
+-- Normal extensionality is not enough to prove this;
+-- see https://github.com/plfa/plfa.github.io/issues/261
+-- and https://github.com/Boarders/plfa-exercises/blob/master/List/List.agda#L449
+--
+-- All-∀′ : ∀ (A : Set) (P : A → Set) (xs : List A)
+--   → All P xs ≃ (∀ (x : A) → x ∈ xs → P x)
+-- All-∀′ A P xs =
+--   record
+--     { to   = to xs
+--     ; from = from xs
+--     ; from∘to = fromTo xs
+--     ; to∘from = toFrom xs
+--     }
+--     where
+--     to : (xs : List A) → All P xs → (∀ (x : A) → x ∈ xs → P x)
+--     to (x ∷ _) (Px ∷ _) x′ (here x≡x′) rewrite x≡x′ = Px
+--     to (_ ∷ xs) (_ ∷ ∀Pxs) x (there x∈xs) = to xs ∀Pxs x x∈xs
+
+--     from : (xs : List A) → (∀ (x : A) → x ∈ xs → P x) → All P xs
+--     from [] _ = []
+--     from (x ∷ xs) ∀Pxs = ∀Pxs x (here refl)
+--                          ∷ from xs (λ x′ x′∈xs → ∀Pxs x′ (there x′∈xs))
+
+--     fromTo : (xs : List A) → (∀Pxs : All P xs) → from xs (to xs ∀Pxs) ≡ ∀Pxs
+--     fromTo [] [] = refl
+--     fromTo (x ∷ xs) (Px ∷ ∀Pxs) = cong (Px ∷_) (fromTo xs ∀Pxs)
+
+--     toFrom′ : (xs : List A) → (∀Pxs : (∀ (x : A) → x ∈ xs → P x))
+--       → (x : A) → to xs (from xs ∀Pxs) x ≡ ∀Pxs x
+--     toFrom′ = {!!}
+--     -- toFrom′ : (xs : List A) → (∀Pxs : (∀ (x : A) → x ∈ xs → P x))
+--     --   → (x : A) → (x∈xs : x ∈ xs) → to xs (from xs ∀Pxs) x x∈xs ≡ ∀Pxs x x∈xs
+--     -- toFrom′ = {!!}
+
+--     toFrom : (xs : List A) → (y : (∀ (x : A) → x ∈ xs → P x)) → to xs (from xs y) ≡ y
+--     toFrom xs ∀Pxs = {!extensionality {∀ (x : A) → x ∈ xs → P x} {∀ (x : A) → x ∈ xs → P x} !}
+
+-- and now with an implicit {x}
+-- All-∀ : ∀ (A : Set) (P : A → Set) (xs : List A)
+--   → All P xs ≃ (∀ {x} → x ∈ xs → P x)
 
 --
