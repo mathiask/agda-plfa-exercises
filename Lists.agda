@@ -580,4 +580,62 @@ Any? P? (x ∷ xs) with P? x | Any? P? xs
 -- All-∀ : ∀ (A : Set) (P : A → Set) (xs : List A)
 --   → All P xs ≃ (∀ {x} → x ∈ xs → P x)
 
+Any-∃ : ∀ (A : Set) (P : A → Set) (xs : List A) →
+  Any P xs ≃ ∃[ x ] (x ∈ xs × P x)
+Any-∃ A P xs =
+  record
+    { to   = to xs
+    ; from = from xs
+    ; from∘to = fromTo xs
+    ; to∘from = toFrom xs
+    }
+    where
+    to : (xs : List A) → Any P xs → ∃[ x ] (x ∈ xs × P x)
+    to (x ∷ _) (here Px) = ⟨ x , ⟨ here refl , Px ⟩ ⟩
+    to (_ ∷ xs) (there p) with to xs p
+    to (x ∷ _) (there p) | ⟨ x′ , ⟨ x∈xs , Px ⟩ ⟩ = ⟨ x′ , ⟨ (there x∈xs) , Px ⟩ ⟩
+
+    -- NOTE: use of .x with ..(ref) !
+
+    from : (xs : List A) → ∃[ x ] (x ∈ xs × P x) → Any P xs
+    from (x ∷ _) ⟨ .x , ⟨ here refl , Px ⟩ ⟩ = here Px
+    from (_ ∷ xs) ⟨ x′ , ⟨ there x′∈xs , Px′ ⟩ ⟩
+      = there (from xs ⟨ x′ , ⟨ x′∈xs , Px′ ⟩ ⟩)
+
+    fromTo : (xs : List A) → (p : Any P xs) → from xs (to xs p) ≡ p
+    fromTo (_ ∷ _) (here _) = refl
+    fromTo (x ∷ xs) (there Px) rewrite fromTo xs Px = refl
+
+    toFrom : (xs : List A) → (∃xPx : ∃[ x ] (x ∈ xs × P x)) →
+      to xs (from xs ∃xPx) ≡ ∃xPx
+    toFrom (x ∷ _) ⟨ .x , ⟨ here refl , Px ⟩ ⟩ = refl
+    toFrom (_ ∷ xs) ⟨ x′ , ⟨ there x′∈xs , Px′ ⟩ ⟩
+      rewrite toFrom xs ⟨ x′ , ⟨ x′∈xs , Px′ ⟩ ⟩ = refl
+
+
+filter? : ∀ {A : Set} {P : A → Set}
+  → (P? : Decidable P) → List A → ∃[ ys ]( All P ys )
+filter? P? [] = ⟨ [] , [] ⟩
+filter? P? (x ∷ xs) with P? x | filter? P? xs
+filter? P? (x ∷ xs) | yes p | ⟨ ys , ∀Pys ⟩ = ⟨ x ∷ ys , p ∷ ∀Pys ⟩
+filter? P? (x ∷ xs) | no ¬p | ⟨ ys , ∀Pys ⟩ = ⟨ ys , ∀Pys ⟩
+
+-- and to be more precise:
+
+filter?! : ∀ {A : Set} {P : A → Set}
+  → (P? : Decidable P) → (xs : List A)
+  → ∃[ ys ]( All P ys × (∀ (x : A) → x ∈ xs → P x → x ∈ ys))
+filter?! P? [] = ⟨ [] , ⟨ [] , (λ _ ()) ⟩ ⟩
+filter?! {A} {P} P? (x ∷ xs) with P? x | filter?! P? xs
+filter?! {A} {P} P? (x ∷ xs) | yes p | ⟨ ys , ⟨ ∀Pys , c ⟩ ⟩
+  = ⟨ x ∷ ys , ⟨ p ∷ ∀Pys , h ⟩ ⟩ where
+  h : (x′ : A) → x′ ∈ (x ∷ xs) → P x′ → x′ ∈ (x ∷ ys)
+  h .x (here refl) Px′ = here refl
+  h x′ (there x′∈xxs) Px′ = there (c x′ x′∈xxs Px′)
+filter?! {A} {P} P? (x ∷ xs) | no ¬p | ⟨ ys , ⟨ ∀Pys , c ⟩ ⟩
+  = ⟨ ys , ⟨ ∀Pys , h ⟩ ⟩ where
+  h : (x′ : A) → x′ ∈ (x ∷ xs) → P x′ → x′ ∈ ys
+  h .x (here refl) Px = ⊥-elim (¬p Px)
+  h x′ (there x′∈xxs) Px′ = c x′ x′∈xxs Px′
+
 --
