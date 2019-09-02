@@ -266,11 +266,6 @@ data _—↠′_ : Term → Term → Set where
 —→-¬value (`suc L) (ξ-suc L—→M) (V-suc ValueL)
   = —→-¬value L L—→M ValueL
 
-Value-uniq : ∀ M → (v₁ v₂ : Value M) → v₁ ≡ v₂
-Value-uniq (ƛ x ⇒ M) V-ƛ V-ƛ = refl
-Value-uniq `zero V-zero V-zero = refl
-Value-uniq (`suc M) (V-suc v₁) (V-suc v₂) rewrite Value-uniq M v₁ v₂ = refl
-
 deterministic : ∀ L {M N}
   → L —→ M
   → L —→ N
