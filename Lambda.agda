@@ -10,6 +10,7 @@ open import Data.List using (List; _∷_; [])
 open import plfa.Isomorphism using (_≲_)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; sym; trans; cong; subst)
+open import Data.Product using (_×_; ∃; ∃-syntax; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
 
 Id : Set
 Id = String
@@ -303,6 +304,27 @@ deterministic (μ x ⇒ L) β-μ β-μ = refl
 
 -- Deterministic relations trivially satisfy "diamond" ...
 
---- ... and "diamond" implies confluence.
+diamond : ∀ {L M N} →
+    ((L —→ M) × (L —→ N))
+    --------------------
+  → ∃[ P ] ((M —↠ P) × (N —↠ P))
+diamond {L} {M} ⟨ L—→M , L—→N ⟩ with deterministic L L—→M  L—→N
+diamond {L} {M} ⟨ L—→M , L—→N ⟩ | refl
+  = ⟨ M , ⟨ M ∎ , M ∎ ⟩ ⟩
+
+--- ... and "diamond" implies confluence. But this is not that easy to prove...
+
+-- confluence : ∀ {L M N}
+--   → ((L —↠ M) × (L —↠ N))
+--     ---------------------------
+--   → ∃[ P ]((M —↠ P) × (N —↠ P))
+
+-- confluence {.M} {M} ⟨ M ∎ , .M ∎ ⟩ = ⟨ M , ⟨ (M ∎) , (M ∎) ⟩ ⟩
+-- confluence {.M} {M} {N} ⟨ M ∎ , .M —→⟨ M—→P ⟩ P—↠N ⟩
+--   = ⟨ N , ⟨ M —→⟨ M—→P ⟩ P—↠N , N ∎ ⟩ ⟩
+-- confluence {L} {M} {N} ⟨ L —→⟨ L—→P ⟩ P—↠M , .L ∎ ⟩
+--   = ⟨ M , ⟨ (M ∎) , (L —→⟨ L—→P ⟩ P—↠M) ⟩ ⟩
+-- confluence {L} {M} {N} ⟨ L —→⟨ L—→P ⟩ P—↠M , L —→⟨ L—→Q ⟩ Q—↠N ⟩
+--   = {!!}
 
 --
