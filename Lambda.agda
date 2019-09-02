@@ -7,7 +7,7 @@ open import Data.Empty using (⊥; ⊥-elim)
 open import Relation.Nullary using (Dec; yes; no; ¬_)
 open import Data.List using (List; _∷_; [])
 
-open import plfa.Isomorphism using (_≲_)
+open import plfa.Isomorphism using (_≲_; _≃_)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; sym; trans; cong; subst)
 open import Data.Product using (_×_; ∃; ∃-syntax; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
@@ -327,6 +327,8 @@ diamond {L} {M} ⟨ L—→M , L—→N ⟩ | refl
 -- confluence {L} {M} {N} ⟨ L —→⟨ L—→P ⟩ P—↠M , L —→⟨ L—→Q ⟩ Q—↠N ⟩
 --   = {!!}
 
+----------------------------------------------------------------------
+
 one : Term
 one = `suc `zero
 
@@ -356,8 +358,48 @@ _ =
          · one)
   —→⟨ ξ-suc (β-ƛ (V-suc V-zero)) ⟩
     `suc (case `zero [zero⇒ one |suc "m" ⇒ `suc (plus · ` "m" · one) ])
-  —→⟨ {!!} ⟩
+  —→⟨ ξ-suc β-zero ⟩
     `suc one
   ∎
+
+----------------------------------------------------------------------
+
+infixr 7 _⇒_
+
+data Type : Set where
+  _⇒_ : Type → Type → Type
+  `ℕ : Type
+
+infixl 5 _,_∶_
+
+data Context : Set where
+  ∅ : Context
+  _,_∶_ : Context → Id → Type → Context
+
+Context-≃ : Context ≃ List (Id × Type)
+Context-≃ = record
+  { to = to
+  ; from = from
+  ; from∘to = from∘to
+  ; to∘from = to∘from
+  }
+  where
+  to : Context → List (Id × Type)
+  to ∅ = []
+  to (ctx , x ∶ t) = ⟨ x , t ⟩ ∷ (to ctx)
+
+  from : List (Id × Type) → Context
+  from [] = ∅
+  from (⟨ x , t ⟩ ∷ xs) = from xs , x ∶ t
+
+  from∘to : (ctx : Context) → from (to ctx) ≡ ctx
+  from∘to ∅ = refl
+  from∘to (ctx , x ∶ t) rewrite from∘to ctx = refl
+
+  to∘from : (xs : List (Id × Type)) → to (from xs) ≡ xs
+  to∘from [] = refl
+  to∘from (x ∷ xs) rewrite to∘from xs = refl
+
+
 
 --
