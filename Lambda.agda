@@ -8,6 +8,8 @@ open import Relation.Nullary using (Dec; yes; no; ¬_)
 open import Data.List using (List; _∷_; [])
 
 open import plfa.Isomorphism using (_≲_)
+import Relation.Binary.PropositionalEquality as Eq
+open Eq using (_≡_; refl; sym; trans; cong; subst)
 
 Id : Set
 Id = String
@@ -257,5 +259,55 @@ data _—↠′_ : Term → Term → Set where
     from∘to (L —→⟨ L—→M ⟩ M—↠N) rewrite from∘to M—↠N = refl
 
 -- It is not an isomorphism as the derivation in the ' case it not unique.
+
+----------------------------------------------------------------------
+
+—→-¬value : ∀ L {M} → L —→ M → ¬ Value L
+—→-¬value (`suc L) (ξ-suc L—→M) (V-suc ValueL)
+  = —→-¬value L L—→M ValueL
+
+Value-uniq : ∀ M → (v₁ v₂ : Value M) → v₁ ≡ v₂
+Value-uniq (ƛ x ⇒ M) V-ƛ V-ƛ = refl
+Value-uniq `zero V-zero V-zero = refl
+Value-uniq (`suc M) (V-suc v₁) (V-suc v₂) rewrite Value-uniq M v₁ v₂ = refl
+
+deterministic : ∀ L {M N}
+  → L —→ M
+  → L —→ N
+    ------
+  → M ≡ N
+deterministic (L · L₁) (ξ-·₁ L—→M) (ξ-·₁ L—→N) rewrite deterministic L L—→M L—→N
+  = refl
+deterministic (L · L₁) (ξ-·₁ L—→M) (ξ-·₂ V L—→N)
+  = ⊥-elim (—→-¬value L L—→M V)
+deterministic (L · L₁) (ξ-·₂ V L—→M) (ξ-·₁ L—→N)
+  = ⊥-elim (—→-¬value L L—→N V)
+deterministic (M · L) (ξ-·₂ V L—→M) (ξ-·₂ V′ L—→N) rewrite deterministic L L—→M L—→N
+  = refl
+deterministic (.(ƛ _ ⇒ _) · L) (ξ-·₂ _ L—→M) (β-ƛ ValueL)
+  = ⊥-elim (—→-¬value L L—→M ValueL)
+deterministic (.(ƛ _ ⇒ _) · L) (β-ƛ ValueL) (ξ-·₂ _ L—→N)
+  = ⊥-elim (—→-¬value L L—→N ValueL)
+deterministic (.(ƛ _ ⇒ _) · L) (β-ƛ _) (β-ƛ _) = refl
+deterministic (`suc L) (ξ-suc L—→M) (ξ-suc L—→N) rewrite deterministic L L—→M L—→N
+  = refl
+deterministic case L [zero⇒ P |suc x ⇒ Q ] (ξ-case case—→M) (ξ-case case—→N)
+  rewrite deterministic L case—→M case—→N
+  = refl
+deterministic case (`suc V) [zero⇒ P |suc x ⇒ Q ] (ξ-case case—→M) (β-suc ValueV)
+  with case—→M
+... | ξ-suc V—→M′ = ⊥-elim ((—→-¬value V V—→M′) ValueV)
+deterministic case .`zero [zero⇒ P |suc x ⇒ Q ] β-zero β-zero
+  = refl
+deterministic case (`suc V) [zero⇒ P |suc x ⇒ Q ] (β-suc ValueV) (ξ-case case—→N)
+  with case—→N
+... | ξ-suc V—→N′ = ⊥-elim ((—→-¬value V V—→N′) ValueV)
+deterministic case .(`suc _) [zero⇒ P |suc x ⇒ Q ] (β-suc x₁) (β-suc x₂)
+  = refl
+deterministic (μ x ⇒ L) β-μ β-μ = refl
+
+-- Deterministic relations trivially satisfy "diamond" ...
+
+--- ... and "diamond" implies confluence.
 
 --
