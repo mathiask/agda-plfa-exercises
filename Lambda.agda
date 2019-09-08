@@ -33,6 +33,9 @@ data Term : Set where
 two : Term
 two = `suc `suc `zero
 
+three : Term
+tree = `suc two
+
 plus : Term
 plus = μ "+" ⇒ ƛ "m" ⇒ ƛ "n" ⇒
          case ` "m"
@@ -41,6 +44,10 @@ plus = μ "+" ⇒ ƛ "m" ⇒ ƛ "n" ⇒
 
 twoᶜ : Term
 twoᶜ = ƛ "s" ⇒ ƛ "z" ⇒ ` "s" · (` "s" · ` "z")
+
+threeᶜ : Term
+threeᶜ = ƛ "s" ⇒ ƛ "z" ⇒ ` "s" · (` "s" · (` "s" · ` "z"))
+
 
 plusᶜ : Term
 plusᶜ = ƛ "m" ⇒ ƛ "n" ⇒ ƛ "s" ⇒ ƛ "z" ⇒
@@ -54,7 +61,7 @@ mul : Term
 mul = μ "*" ⇒ ƛ "m" ⇒ ƛ "n" ⇒
          case ` "m"
          [zero⇒ `zero
-         |suc "m" ⇒ ` "+" · ` "n" · (` "*" · ` "m" · ` "n") ]
+         |suc "m" ⇒ plus · ` "n" · (` "*" · ` "m" · ` "n") ]
 
 mulᶜ : Term
 mulᶜ = ƛ "m" ⇒ ƛ "n" ⇒ ƛ "s" ⇒ ƛ "z" ⇒
@@ -401,5 +408,157 @@ Context-≃ = record
   to∘from (x ∷ xs) rewrite to∘from xs = refl
 
 
+infix 4 _∋_∶_
+
+data _∋_∶_ : Context → Id → Type → Set where
+  Z : ∀ {Γ x A}
+      -----------------
+    → Γ , x ∶ A ∋ x ∶ A
+
+  S : ∀ {Γ x y A B}
+    → x ≢ y
+    → Γ ∋ x ∶ A
+      -----------------
+    → Γ , y ∶ B ∋ x ∶ A
+
+infix 4 _⊢_∶_
+
+data _⊢_∶_ : Context → Term → Type → Set where
+  -- Axiom
+  ⊢` : ∀ {Γ x A}
+    → Γ ∋ x ∶ A
+      -----------
+    → Γ ⊢ ` x ∶ A
+
+  -- ⇒-I
+  ⊢ƛ : ∀ {Γ x N A B}
+     → Γ , x ∶ A ⊢ N ∶ B
+       -----------------
+     → Γ ⊢ ƛ x ⇒ N ∶ A ⇒ B
+
+  -- ⇒-E
+  _·_ : ∀ {Γ L M A B}
+    → Γ ⊢ L ∶ A ⇒ B
+    → Γ ⊢ M ∶ A
+      -------------
+    → Γ ⊢ L · M ∶ B
+
+  -- ℕ-I₁
+  ⊢zero : ∀ {Γ}
+      --------------
+    → Γ ⊢ `zero ∶ `ℕ
+
+  -- ℕ-I₂
+  ⊢suc : ∀ {Γ M }
+    → Γ ⊢ M ∶ `ℕ
+      ---------------
+    → Γ ⊢ `suc M ∶ `ℕ
+
+  -- ℕ-E
+  ⊢-case : ∀ {Γ L M x N A}
+    → Γ ⊢ L ∶ `ℕ
+    → Γ ⊢ M ∶ A
+    → Γ , x ∶ `ℕ ⊢ N ∶ A
+      -------------------------------------
+    → Γ ⊢ case L [zero⇒ M |suc x ⇒ N ] ∶ A
+
+  ⊢μ : ∀ {Γ x M A}
+    → Γ , x ∶ A ⊢ M ∶ A
+      -----------------
+    → Γ ⊢ μ x ⇒ M ∶ A
+
+
+_≠_ : ∀ (x y : Id) → x ≢ y
+x ≠ y with x ≟ y
+...        | no x≢y = x≢y
+...        | yes _  = ⊥-elim impossible
+  where postulate impossible : ⊥
+
+
+Ch : Type → Type
+Ch A = (A ⇒ A) ⇒ A ⇒ A
+
+⊢twoᶜ : ∀ {Γ A} → Γ ⊢ twoᶜ ∶ Ch A
+⊢twoᶜ = ⊢ƛ (⊢ƛ (⊢` ∋s · (⊢` ∋s · ⊢` ∋z)))
+  where
+  ∋s = S ("s" ≠ "z") Z
+  ∋z = Z
+
+⊢two : ∀ {Γ} → Γ ⊢ two ∶ `ℕ
+⊢two = ⊢suc (⊢suc ⊢zero)
+
+⊢plus : ∀ {Γ} → Γ ⊢ plus ∶ `ℕ ⇒ `ℕ ⇒ `ℕ
+⊢plus = ⊢μ (⊢ƛ (⊢ƛ (⊢-case (⊢` (S ("m" ≠ "n") Z))
+  (⊢` Z)
+  (⊢suc (((⊢` (S ("+" ≠ "m") (S ("+" ≠ "n") (S ("+" ≠ "m") Z))))
+    · ⊢` Z) · ⊢` (S ("n" ≠ "m") Z))))))
+
+⊢2+2 : ∅ ⊢ plus · two · two ∶ `ℕ
+⊢2+2 = ⊢plus · ⊢two · ⊢two
+
+⊢plusᶜ : ∀ {Γ A} → Γ  ⊢ plusᶜ ∶ Ch A ⇒ Ch A ⇒ Ch A
+⊢plusᶜ {Γ} {A} = ⊢ƛ (⊢ƛ (⊢ƛ (⊢ƛ ((⊢` (S ("m" ≠ "z") (S ("m" ≠ "s") (S ("m" ≠ "n") Z)))
+ · ⊢` (S ("s" ≠ "z") Z))
+ · (((⊢` (S ("n" ≠ "z") (S ("n" ≠ "s") Z))) · ⊢` (S ("s" ≠ "z") Z)) · ⊢` Z)))))
+
+⊢sucᶜ : ∅ ⊢ sucᶜ ∶ `ℕ ⇒ `ℕ
+⊢sucᶜ = ⊢ƛ (⊢suc (⊢` Z))
+
+⊢2+2ᶜ : ∅ ⊢ plusᶜ · twoᶜ · twoᶜ · sucᶜ · `zero ∶ `ℕ
+⊢2+2ᶜ = ⊢plusᶜ · ⊢twoᶜ · ⊢twoᶜ · ⊢sucᶜ · ⊢zero
+
+
+∋-injective : ∀ {Γ x A B} → Γ ∋ x ∶ A → Γ ∋ x ∶ B → A ≡ B
+∋-injective Z Z = refl
+∋-injective Z (S x b) = ⊥-elim (x refl)
+∋-injective (S x a) Z = ⊥-elim (x refl)
+∋-injective (S _ a) (S _ b) = ∋-injective a b
+
+nope₁ : ∀ {A} → ¬ (∅ ⊢ `zero · `suc `zero ∶ A)
+nope₁ (() · _)
+
+nope₂ : ∀ {A} → ¬ (∅ ⊢ ƛ "x" ⇒ ` "x" · ` "x" ∶ A)
+nope₂ (⊢ƛ (⊢` x · ⊢` x₁)) = contradiction (∋-injective x x₁)
+  where
+  contradiction : ∀ {A B} → ¬ (A ⇒ B ≡ A)
+  contradiction ()
+
+q1 : ∅ , "y" ∶ `ℕ ⇒ `ℕ , "x" ∶ `ℕ ⊢ ` "y" · ` "x" ∶ `ℕ
+q1 = (⊢` (S ("y" ≠ "x") Z)) · ⊢` Z
+
+q2 : ∀ {A} → ¬ (∅ , "y" ∶ `ℕ ⇒ `ℕ , "x" ∶ `ℕ ⊢ ` "x" · ` "y" ∶ A)
+q2 (⊢` x · ⊢` x₁) = contradiction (∋-injective x xN)
+  where
+  xN : ∅ , "y" ∶ `ℕ ⇒ `ℕ , "x" ∶ `ℕ ∋ "x" ∶ `ℕ
+  xN = Z
+  contradiction : ∀ {A B} → ¬ (A ⇒ B ≡ `ℕ)
+  contradiction ()
+
+q3 : ∅ , "y" ∶ `ℕ ⇒ `ℕ ⊢ ƛ "x" ⇒ ` "y" · ` "x" ∶ `ℕ ⇒ `ℕ
+q3 = ⊢ƛ ((⊢` (S ("y" ≠ "x") Z)) · (⊢` Z))
+
+qq1 : ∀ {A B} → ¬ (∅ , "x" ∶ A ⊢ ` "x" · ` "x" ∶ B)
+qq1 (⊢` x · ⊢` x₁) = contradiction (∋-injective x x₁)
+  where
+  contradiction : ∀ {A B} → ¬ (A ⇒ B ≡ A)
+  contradiction ()
+
+qq2 : ∅ , "x" ∶ `ℕ ⇒ `ℕ , "y" ∶ `ℕ ⇒ `ℕ ⊢
+  ƛ "z" ⇒ ` "x" · (` "y" · ` "z") ∶ `ℕ ⇒ `ℕ
+qq2 = ⊢ƛ ((⊢` (S ("x" ≠ "z") (S ("x" ≠ "y") Z)))
+  · (⊢` (S ("y" ≠ "z") Z) · ⊢` Z))
+
+mul-type : ∀ {Γ} → Γ ⊢ mul ∶ `ℕ ⇒ `ℕ ⇒ `ℕ
+mul-type = ⊢μ (⊢ƛ (⊢ƛ (⊢-case (⊢` (S ("m" ≠ "n") Z))
+ ⊢zero
+ ((⊢plus · ⊢` (S ("n" ≠ "m") Z))
+ · (((⊢` (S ("*" ≠ "m") (S ("*" ≠ "n") (S ("*" ≠ "m") Z))))
+ · (⊢` Z)) · (⊢` (S ("n" ≠ "m") Z)))))))
+
+mulᶜ-type : ∀ {Γ A} → Γ  ⊢ mulᶜ ∶ Ch A ⇒ Ch A ⇒ Ch A
+mulᶜ-type = ⊢ƛ (⊢ƛ (⊢ƛ (⊢ƛ (((⊢` (S ("m" ≠ "z") (S ("m" ≠ "s") (S ("m" ≠ "n") Z))))
+          · ((⊢` (S ("n" ≠ "z") (S ("n" ≠ "s") Z)))
+          · (⊢` (S ("s" ≠ "z") Z))))
+  · (⊢` Z)))))
 
 --
