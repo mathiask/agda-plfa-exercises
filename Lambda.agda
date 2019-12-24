@@ -34,7 +34,7 @@ two : Term
 two = `suc `suc `zero
 
 three : Term
-tree = `suc two
+three = `suc two
 
 plus : Term
 plus = μ "+" ⇒ ƛ "m" ⇒ ƛ "n" ⇒
