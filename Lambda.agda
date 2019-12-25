@@ -377,11 +377,11 @@ data Type : Set where
   _⇒_ : Type → Type → Type
   `ℕ : Type
 
-infixl 5 _,_∶_
+infixl 5 _,_⦂_
 
 data Context : Set where
   ∅ : Context
-  _,_∶_ : Context → Id → Type → Context
+  _,_⦂_ : Context → Id → Type → Context
 
 Context-≃ : Context ≃ List (Id × Type)
 Context-≃ = record
@@ -393,79 +393,79 @@ Context-≃ = record
   where
   to : Context → List (Id × Type)
   to ∅ = []
-  to (ctx , x ∶ t) = ⟨ x , t ⟩ ∷ (to ctx)
+  to (ctx , x ⦂ t) = ⟨ x , t ⟩ ∷ (to ctx)
 
   from : List (Id × Type) → Context
   from [] = ∅
-  from (⟨ x , t ⟩ ∷ xs) = from xs , x ∶ t
+  from (⟨ x , t ⟩ ∷ xs) = from xs , x ⦂ t
 
   from∘to : (ctx : Context) → from (to ctx) ≡ ctx
   from∘to ∅ = refl
-  from∘to (ctx , x ∶ t) rewrite from∘to ctx = refl
+  from∘to (ctx , x ⦂ t) rewrite from∘to ctx = refl
 
   to∘from : (xs : List (Id × Type)) → to (from xs) ≡ xs
   to∘from [] = refl
   to∘from (x ∷ xs) rewrite to∘from xs = refl
 
 
-infix 4 _∋_∶_
+infix 4 _∋_⦂_
 
-data _∋_∶_ : Context → Id → Type → Set where
+data _∋_⦂_ : Context → Id → Type → Set where
   Z : ∀ {Γ x A}
       -----------------
-    → Γ , x ∶ A ∋ x ∶ A
+    → Γ , x ⦂ A ∋ x ⦂ A
 
   S : ∀ {Γ x y A B}
     → x ≢ y
-    → Γ ∋ x ∶ A
+    → Γ ∋ x ⦂ A
       -----------------
-    → Γ , y ∶ B ∋ x ∶ A
+    → Γ , y ⦂ B ∋ x ⦂ A
 
-infix 4 _⊢_∶_
+infix 4 _⊢_⦂_
 
-data _⊢_∶_ : Context → Term → Type → Set where
+data _⊢_⦂_ : Context → Term → Type → Set where
   -- Axiom
   ⊢` : ∀ {Γ x A}
-    → Γ ∋ x ∶ A
+    → Γ ∋ x ⦂ A
       -----------
-    → Γ ⊢ ` x ∶ A
+    → Γ ⊢ ` x ⦂ A
 
   -- ⇒-I
   ⊢ƛ : ∀ {Γ x N A B}
-     → Γ , x ∶ A ⊢ N ∶ B
+     → Γ , x ⦂ A ⊢ N ⦂ B
        -----------------
-     → Γ ⊢ ƛ x ⇒ N ∶ A ⇒ B
+     → Γ ⊢ ƛ x ⇒ N ⦂ A ⇒ B
 
   -- ⇒-E
   _·_ : ∀ {Γ L M A B}
-    → Γ ⊢ L ∶ A ⇒ B
-    → Γ ⊢ M ∶ A
+    → Γ ⊢ L ⦂ A ⇒ B
+    → Γ ⊢ M ⦂ A
       -------------
-    → Γ ⊢ L · M ∶ B
+    → Γ ⊢ L · M ⦂ B
 
   -- ℕ-I₁
   ⊢zero : ∀ {Γ}
       --------------
-    → Γ ⊢ `zero ∶ `ℕ
+    → Γ ⊢ `zero ⦂ `ℕ
 
   -- ℕ-I₂
   ⊢suc : ∀ {Γ M }
-    → Γ ⊢ M ∶ `ℕ
+    → Γ ⊢ M ⦂ `ℕ
       ---------------
-    → Γ ⊢ `suc M ∶ `ℕ
+    → Γ ⊢ `suc M ⦂ `ℕ
 
   -- ℕ-E
   ⊢-case : ∀ {Γ L M x N A}
-    → Γ ⊢ L ∶ `ℕ
-    → Γ ⊢ M ∶ A
-    → Γ , x ∶ `ℕ ⊢ N ∶ A
+    → Γ ⊢ L ⦂ `ℕ
+    → Γ ⊢ M ⦂ A
+    → Γ , x ⦂ `ℕ ⊢ N ⦂ A
       -------------------------------------
-    → Γ ⊢ case L [zero⇒ M |suc x ⇒ N ] ∶ A
+    → Γ ⊢ case L [zero⇒ M |suc x ⇒ N ] ⦂ A
 
   ⊢μ : ∀ {Γ x M A}
-    → Γ , x ∶ A ⊢ M ∶ A
+    → Γ , x ⦂ A ⊢ M ⦂ A
       -----------------
-    → Γ ⊢ μ x ⇒ M ∶ A
+    → Γ ⊢ μ x ⇒ M ⦂ A
 
 
 _≠_ : ∀ (x y : Id) → x ≢ y
@@ -478,84 +478,84 @@ x ≠ y with x ≟ y
 Ch : Type → Type
 Ch A = (A ⇒ A) ⇒ A ⇒ A
 
-⊢twoᶜ : ∀ {Γ A} → Γ ⊢ twoᶜ ∶ Ch A
+⊢twoᶜ : ∀ {Γ A} → Γ ⊢ twoᶜ ⦂ Ch A
 ⊢twoᶜ = ⊢ƛ (⊢ƛ (⊢` ∋s · (⊢` ∋s · ⊢` ∋z)))
   where
   ∋s = S ("s" ≠ "z") Z
   ∋z = Z
 
-⊢two : ∀ {Γ} → Γ ⊢ two ∶ `ℕ
+⊢two : ∀ {Γ} → Γ ⊢ two ⦂ `ℕ
 ⊢two = ⊢suc (⊢suc ⊢zero)
 
-⊢plus : ∀ {Γ} → Γ ⊢ plus ∶ `ℕ ⇒ `ℕ ⇒ `ℕ
+⊢plus : ∀ {Γ} → Γ ⊢ plus ⦂ `ℕ ⇒ `ℕ ⇒ `ℕ
 ⊢plus = ⊢μ (⊢ƛ (⊢ƛ (⊢-case (⊢` (S ("m" ≠ "n") Z))
   (⊢` Z)
   (⊢suc (((⊢` (S ("+" ≠ "m") (S ("+" ≠ "n") (S ("+" ≠ "m") Z))))
     · ⊢` Z) · ⊢` (S ("n" ≠ "m") Z))))))
 
-⊢2+2 : ∅ ⊢ plus · two · two ∶ `ℕ
+⊢2+2 : ∅ ⊢ plus · two · two ⦂ `ℕ
 ⊢2+2 = ⊢plus · ⊢two · ⊢two
 
-⊢plusᶜ : ∀ {Γ A} → Γ  ⊢ plusᶜ ∶ Ch A ⇒ Ch A ⇒ Ch A
+⊢plusᶜ : ∀ {Γ A} → Γ  ⊢ plusᶜ ⦂ Ch A ⇒ Ch A ⇒ Ch A
 ⊢plusᶜ {Γ} {A} = ⊢ƛ (⊢ƛ (⊢ƛ (⊢ƛ ((⊢` (S ("m" ≠ "z") (S ("m" ≠ "s") (S ("m" ≠ "n") Z)))
  · ⊢` (S ("s" ≠ "z") Z))
  · (((⊢` (S ("n" ≠ "z") (S ("n" ≠ "s") Z))) · ⊢` (S ("s" ≠ "z") Z)) · ⊢` Z)))))
 
-⊢sucᶜ : ∅ ⊢ sucᶜ ∶ `ℕ ⇒ `ℕ
+⊢sucᶜ : ∅ ⊢ sucᶜ ⦂ `ℕ ⇒ `ℕ
 ⊢sucᶜ = ⊢ƛ (⊢suc (⊢` Z))
 
-⊢2+2ᶜ : ∅ ⊢ plusᶜ · twoᶜ · twoᶜ · sucᶜ · `zero ∶ `ℕ
+⊢2+2ᶜ : ∅ ⊢ plusᶜ · twoᶜ · twoᶜ · sucᶜ · `zero ⦂ `ℕ
 ⊢2+2ᶜ = ⊢plusᶜ · ⊢twoᶜ · ⊢twoᶜ · ⊢sucᶜ · ⊢zero
 
 
-∋-injective : ∀ {Γ x A B} → Γ ∋ x ∶ A → Γ ∋ x ∶ B → A ≡ B
+∋-injective : ∀ {Γ x A B} → Γ ∋ x ⦂ A → Γ ∋ x ⦂ B → A ≡ B
 ∋-injective Z Z = refl
 ∋-injective Z (S x b) = ⊥-elim (x refl)
 ∋-injective (S x a) Z = ⊥-elim (x refl)
 ∋-injective (S _ a) (S _ b) = ∋-injective a b
 
-nope₁ : ∀ {A} → ¬ (∅ ⊢ `zero · `suc `zero ∶ A)
+nope₁ : ∀ {A} → ¬ (∅ ⊢ `zero · `suc `zero ⦂ A)
 nope₁ (() · _)
 
-nope₂ : ∀ {A} → ¬ (∅ ⊢ ƛ "x" ⇒ ` "x" · ` "x" ∶ A)
+nope₂ : ∀ {A} → ¬ (∅ ⊢ ƛ "x" ⇒ ` "x" · ` "x" ⦂ A)
 nope₂ (⊢ƛ (⊢` x · ⊢` x₁)) = contradiction (∋-injective x x₁)
   where
   contradiction : ∀ {A B} → ¬ (A ⇒ B ≡ A)
   contradiction ()
 
-q1 : ∅ , "y" ∶ `ℕ ⇒ `ℕ , "x" ∶ `ℕ ⊢ ` "y" · ` "x" ∶ `ℕ
+q1 : ∅ , "y" ⦂ `ℕ ⇒ `ℕ , "x" ⦂ `ℕ ⊢ ` "y" · ` "x" ⦂ `ℕ
 q1 = (⊢` (S ("y" ≠ "x") Z)) · ⊢` Z
 
-q2 : ∀ {A} → ¬ (∅ , "y" ∶ `ℕ ⇒ `ℕ , "x" ∶ `ℕ ⊢ ` "x" · ` "y" ∶ A)
+q2 : ∀ {A} → ¬ (∅ , "y" ⦂ `ℕ ⇒ `ℕ , "x" ⦂ `ℕ ⊢ ` "x" · ` "y" ⦂ A)
 q2 (⊢` x · ⊢` x₁) = contradiction (∋-injective x xN)
   where
-  xN : ∅ , "y" ∶ `ℕ ⇒ `ℕ , "x" ∶ `ℕ ∋ "x" ∶ `ℕ
+  xN : ∅ , "y" ⦂ `ℕ ⇒ `ℕ , "x" ⦂ `ℕ ∋ "x" ⦂ `ℕ
   xN = Z
   contradiction : ∀ {A B} → ¬ (A ⇒ B ≡ `ℕ)
   contradiction ()
 
-q3 : ∅ , "y" ∶ `ℕ ⇒ `ℕ ⊢ ƛ "x" ⇒ ` "y" · ` "x" ∶ `ℕ ⇒ `ℕ
+q3 : ∅ , "y" ⦂ `ℕ ⇒ `ℕ ⊢ ƛ "x" ⇒ ` "y" · ` "x" ⦂ `ℕ ⇒ `ℕ
 q3 = ⊢ƛ ((⊢` (S ("y" ≠ "x") Z)) · (⊢` Z))
 
-qq1 : ∀ {A B} → ¬ (∅ , "x" ∶ A ⊢ ` "x" · ` "x" ∶ B)
+qq1 : ∀ {A B} → ¬ (∅ , "x" ⦂ A ⊢ ` "x" · ` "x" ⦂ B)
 qq1 (⊢` x · ⊢` x₁) = contradiction (∋-injective x x₁)
   where
   contradiction : ∀ {A B} → ¬ (A ⇒ B ≡ A)
   contradiction ()
 
-qq2 : ∅ , "x" ∶ `ℕ ⇒ `ℕ , "y" ∶ `ℕ ⇒ `ℕ ⊢
-  ƛ "z" ⇒ ` "x" · (` "y" · ` "z") ∶ `ℕ ⇒ `ℕ
+qq2 : ∅ , "x" ⦂ `ℕ ⇒ `ℕ , "y" ⦂ `ℕ ⇒ `ℕ ⊢
+  ƛ "z" ⇒ ` "x" · (` "y" · ` "z") ⦂ `ℕ ⇒ `ℕ
 qq2 = ⊢ƛ ((⊢` (S ("x" ≠ "z") (S ("x" ≠ "y") Z)))
   · (⊢` (S ("y" ≠ "z") Z) · ⊢` Z))
 
-mul-type : ∀ {Γ} → Γ ⊢ mul ∶ `ℕ ⇒ `ℕ ⇒ `ℕ
+mul-type : ∀ {Γ} → Γ ⊢ mul ⦂ `ℕ ⇒ `ℕ ⇒ `ℕ
 mul-type = ⊢μ (⊢ƛ (⊢ƛ (⊢-case (⊢` (S ("m" ≠ "n") Z))
  ⊢zero
  ((⊢plus · ⊢` (S ("n" ≠ "m") Z))
  · (((⊢` (S ("*" ≠ "m") (S ("*" ≠ "n") (S ("*" ≠ "m") Z))))
  · (⊢` Z)) · (⊢` (S ("n" ≠ "m") Z)))))))
 
-mulᶜ-type : ∀ {Γ A} → Γ  ⊢ mulᶜ ∶ Ch A ⇒ Ch A ⇒ Ch A
+mulᶜ-type : ∀ {Γ A} → Γ  ⊢ mulᶜ ⦂ Ch A ⇒ Ch A ⇒ Ch A
 mulᶜ-type = ⊢ƛ (⊢ƛ (⊢ƛ (⊢ƛ (((⊢` (S ("m" ≠ "z") (S ("m" ≠ "s") (S ("m" ≠ "n") Z))))
           · ((⊢` (S ("n" ≠ "z") (S ("n" ≠ "s") Z)))
           · (⊢` (S ("s" ≠ "z") Z))))
