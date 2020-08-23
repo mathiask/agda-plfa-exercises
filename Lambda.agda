@@ -11,6 +11,7 @@ open import plfa.Isomorphism using (_≲_; _≃_)
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; sym; trans; cong; subst)
 open import Data.Product using (_×_; ∃; ∃-syntax; proj₁; proj₂) renaming (_,_ to ⟨_,_⟩)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
 
 Id : Set
 Id = String
@@ -333,6 +334,27 @@ diamond {L} {M} ⟨ L—→M , L—→N ⟩ | refl
 --   = ⟨ M , ⟨ (M ∎) , (L —→⟨ L—→P ⟩ P—↠M) ⟩ ⟩
 -- confluence {L} {M} {N} ⟨ L —→⟨ L—→P ⟩ P—↠M , L —→⟨ L—→Q ⟩ Q—↠N ⟩
 --   = {!!}
+
+-- BEGIN extra 2020-08-23
+-- As a consequence of "deterministic":
+onePath : ∀ {L M N }
+  → L —↠ M
+  → L —↠ N
+    -------------------
+  → (M —↠ N) ⊎ (N —↠ M)
+onePath {L} (L ∎) n = inj₁ n
+onePath {L} m (L ∎) = inj₂ m
+onePath {L} (L —→⟨ r₁ ⟩ IM) (L —→⟨ r₂ ⟩ IN) with deterministic L r₁ r₂
+onePath {L} (L —→⟨ r₁ ⟩ IM) (L —→⟨ r₂ ⟩ IN) | refl = onePath IM IN
+
+confluence : ∀ {L M N}
+  → ((L —↠ M) × (L —↠ N))
+    ---------------------------
+  → ∃[ P ]((M —↠ P) × (N —↠ P))
+confluence ⟨ lm , ln ⟩ with onePath lm ln
+confluence {L} {M} {N} ⟨ lm , ln ⟩ | inj₁ mn = ⟨ N , ⟨ mn , (N ∎) ⟩ ⟩
+confluence {L} {M} ⟨ lm , ln ⟩ | inj₂ nm = ⟨ M , ⟨ (M ∎) , nm ⟩ ⟩
+-- END extra 2020-08-23
 
 ----------------------------------------------------------------------
 
