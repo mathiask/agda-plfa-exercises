@@ -166,7 +166,7 @@ value? M with progress M
 ... | done VM = yes VM
 ... | step s = no (—→¬V s)
 
-------------------------------------------------------------------
+----------------------------------------------------------------------
 
 ext : ∀ {Γ Δ}
   → (∀ {x A}     →         Γ ∋ x ⦂ A →         Δ ∋ x ⦂ A)
@@ -266,3 +266,127 @@ preserve (⊢-case ⊢L ⊢M ⊢N) (ξ-case L→L′) = ⊢-case (preserve ⊢L 
 preserve (⊢-case ⊢zero ⊢M ⊢N) β-zero = ⊢M
 preserve (⊢-case (⊢suc ⊢V) ⊢M ⊢N) (β-suc VV) = subst ⊢V ⊢N
 preserve (⊢μ ⊢M) β-μ = subst (⊢μ ⊢M) ⊢M
+
+------------------------------ Evaluation ------------------------------
+
+record Gas : Set where
+  constructor gas
+  field
+    amount : ℕ
+
+-- C-cC-n or C-cC-d: "gas 42" "Gas.amount (gas 42)"
+
+data Finished (N : Term) : Set where
+  done :
+      Value N
+      ----------
+    → Finished N
+
+  out-of-gas :
+      ----------
+      Finished N
+
+
+data Steps (L  : Term) : Set where
+  steps : ∀ {N}
+    → L —↠ N
+    → Finished N
+      ----------
+    → Steps L
+
+eval : ∀ {L A}
+  → Gas
+  → ∅ ⊢ L ⦂ A
+    ---------
+  → Steps L
+eval {L} (gas zero) ⊢L = steps (L ∎) out-of-gas
+eval {L} (gas (suc m)) ⊢L with progress ⊢L
+... | done VL = steps (L ∎) (done VL)
+... | step {M} L→M with eval (gas m) (preserve ⊢L L→M)
+...   | steps M↠N fin = steps (L —→⟨ L→M ⟩ M↠N) fin
+
+⊢sucμ : ∅ ⊢ μ "x" ⇒ `suc ` "x" ⦂ `ℕ
+⊢sucμ = ⊢μ (⊢suc (⊢` Z))
+
+-- C-cC-n: eval (gas 3) ⊢sucμ
+--         eval (gas 100) (⊢twoᶜ · ⊢sucᶜ · ⊢zero)
+--         eval (gas 5) (⊢twoᶜ · ⊢sucᶜ · ⊢zero)
+--         eval (gas 100) ⊢2+2
+--           actually gas 14 suffices
+--         eval (gas 100) ⊢2+2ᶜ
+
+⊢2*2 : ∅ ⊢ mul · two · two ⦂ `ℕ
+⊢2*2 = mul-type · ⊢two · ⊢two
+
+-- _ : eval (gas 50) ⊢2*2 ≡
+-- -- C-cC-n and paste result here:
+-- _ = refl
+
+-- Progress-preservation
+postulate
+  _ : ∀ M {A} → ∅ ⊢ M ⦂ A → Value M ⊎ ∃[ N ](M —→ N)
+  _ : ∀ M N {A} → ∅ ⊢ M ⦂ A → M —→ N → ∅ ⊢ N ⦂ A
+  
+⊢Xcase1 : (∅ , "x" ⦂ `ℕ) ⊢ case `zero [zero⇒ `zero |suc "a" ⇒ ` "x" ] ⦂ `ℕ
+⊢Xcase1 = ⊢-case ⊢zero ⊢zero (⊢` (S ("x" ≠ "a") Z))
+⊢Xcase2 : ∅ ⊢ `zero ⦂ `ℕ
+⊢Xcase2 = ⊢zero
+⊢Xcase3 : case `zero [zero⇒ `zero |suc "a" ⇒ ` "x" ] —→ `zero
+⊢Xcase3 = β-zero
+
+⊢Xnocase1 : (∅ , "x" ⦂ `ℕ) ⊢ (ƛ "a" ⇒ (ƛ "b" ⇒ ` "b")) · (ƛ "c" ⇒ ` "x") ⦂ `ℕ ⇒ `ℕ
+⊢Xnocase1 = (⊢ƛ (⊢ƛ (⊢` Z))) · (⊢ƛ {A = `ℕ} (⊢` (S ("x" ≠ "c") Z)))
+⊢Xnocase2 : ∅ ⊢ (ƛ "b" ⇒ ` "b") ⦂ `ℕ ⇒ `ℕ
+⊢Xnocase2 = ⊢ƛ (⊢` Z)
+⊢Xnocase3 : (ƛ "a" ⇒ (ƛ "b" ⇒ ` "b")) · (ƛ "c" ⇒ ` "x") —→ ƛ "b" ⇒ ` "b"
+⊢Xnocase3 = β-ƛ V-ƛ
+
+----------------------------------------------------------------------
+
+Normal : Term → Set
+Normal M = ∀ {N} → ¬ (M —→ N)
+
+Stuck : Term → Set
+Stuck M = Normal M × ¬ Value M
+
+Xstuck1 : Stuck (`zero · `zero)
+Xstuck1 = ⟨ n , nv ⟩ where
+  n : ∀ {N} →  `zero · `zero —→ N → ⊥
+  n (ξ-·₁ ())
+  n (ξ-·₂ _ ())
+  nv : ¬ Value  (`zero · `zero)
+  nv ()
+Xstuck1b : ∀ {Γ A} → Γ ⊢ `zero · `zero ⦂ A → ⊥
+Xstuck1b {Γ} {A} (() · ⊢z₂)
+
+Xstuck2a : Stuck (` "x")
+Xstuck2a = ⟨ n , nv ⟩ where
+  n : ∀ {N : Term} →  ` "x" —→ N → ⊥
+  n ()
+  nv : ¬ Value  (` "x")
+  nv ()
+Xstuck2b : ∅ , "x" ⦂ `ℕ ⊢ ` "x" ⦂ `ℕ
+Xstuck2b = ⊢` Z
+
+unstuck : ∀ {M A}
+  → ∅ ⊢ M ⦂ A
+    -----------
+  → ¬ (Stuck M)
+unstuck ⊢M s with progress ⊢M
+unstuck ⊢M ⟨ nostep , _ ⟩ | step M→N = nostep M→N
+unstuck ⊢M ⟨ _ , noval ⟩ | done VM = noval VM
+
+preserves : ∀ {M N A}
+  → ∅ ⊢ M ⦂ A
+  → M —↠ N
+    ---------
+  → ∅ ⊢ N ⦂ A
+preserves ⊢M (M ∎) = ⊢M
+preserves ⊢M (M —→⟨ M→N ⟩ s) = preserves (preserve ⊢M M→N) s
+
+wttdgs : ∀ {M N A}
+  → ∅ ⊢ M ⦂ A
+  → M —↠ N
+    -----------
+  → ¬ (Stuck N)
+wttdgs ⊢M M↠N s = unstuck (preserves ⊢M M↠N) s
