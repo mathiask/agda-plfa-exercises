@@ -390,3 +390,66 @@ wttdgs : ∀ {M N A}
     -----------
   → ¬ (Stuck N)
 wttdgs ⊢M M↠N s = unstuck (preserves ⊢M M↠N) s
+
+----------------------------------------------------------------------
+
+cong₄ : ∀ {A B C D E : Set} (f : A → B → C → D → E)
+  {s w : A} {t x : B} {u y : C} {v z : D}
+  → s ≡ w → t ≡ x → u ≡ y → v ≡ z → f s t u v ≡ f w x y z
+cong₄ f refl refl refl refl = refl
+
+det : ∀ {M M′ M″}
+  → (M —→ M′)
+  → (M —→ M″)
+    --------
+  → M′ ≡ M″
+det (ξ-·₁ s₁) (ξ-·₁ s₂) = cong₂ _·_ (det s₁ s₂) refl
+det (ξ-·₁ s) (ξ-·₂ VL _) = ⊥-elim (V¬—→ VL s)
+det (ξ-·₂ VL _) (ξ-·₁ s) = ⊥-elim (V¬—→ VL s)
+det (ξ-·₂ _ s₁) (ξ-·₂ _ s₂) = cong₂ _·_ refl (det s₁ s₂) 
+det (ξ-·₂ _ s) (β-ƛ VM) = ⊥-elim (V¬—→ VM s)
+det (β-ƛ VV) (ξ-·₂ _ s) = ⊥-elim (V¬—→ VV s)
+det (β-ƛ _) (β-ƛ _) = refl
+det (ξ-suc s₁) (ξ-suc s₂) = cong `suc_ (det s₁ s₂)
+det (ξ-case s₁) (ξ-case s₂) = cong₄ case_[zero⇒_|suc_⇒_] (det s₁ s₂) refl refl refl
+det (ξ-case s) (β-suc VV) = ⊥-elim (V¬—→ (V-suc VV) s)
+det β-zero β-zero = refl
+det (β-suc VV) (ξ-case s) = ⊥-elim (V¬—→ (V-suc VV) s)
+det (β-suc _) (β-suc _) = refl
+det β-μ β-μ = refl
+
+-- Quizzes
+-- =======
+--
+-- -------- β-zap
+-- M —→ zap
+--
+-- ----------- ⊢zap
+-- Γ ⊢ zap ⦂ A
+--
+-- Determinism of step becomes false, for any M that allows a "normal" step.
+-- Progress remains true.
+-- Preservation remains true (though types are no longer unique, wich we
+--   haven't proved anyway).
+--
+--
+-- ------------------ β-foo₁
+-- (λ x ⇒ ` x) —→ foo
+
+-- ----------- β-foo₂
+-- foo —→ zero
+-- Determinism of step becomes false, as we can now reduce λ on the left of _·_.
+-- Progress remains true.
+-- Preservation is unclear as the is no typing rule for foo.
+--
+--
+-- If we remove ξ-·₁:
+-- Determinism remains true.
+-- Progress becomes false: ((λ x . suc) zero) zero
+-- Preservation remains true.
+--
+--
+-- If we add "Kleene application":
+-- Determinism remains true.
+-- Progress remains true.
+-- Preservation remains true (as none of the relevant terms can be typed).
