@@ -22,6 +22,7 @@ infix  8 `suc_
 infix  9 `_
 infix  9 S_
 infix  9 #_
+infixr 8 _`∷_
 
 data Type : Set where
   `ℕ    : Type
@@ -31,6 +32,7 @@ data Type : Set where
   _`⊎_  : Type → Type → Type
   `⊥    : Type
   `⊤    : Type
+  `List : Type → Type
 
 data Context : Set where
   ∅   : Context
@@ -173,6 +175,26 @@ data _⊢_ : Context → Type → Set where
       -------
     → Γ ⊢ `⊤
 
+  -- lists
+
+  `[] : ∀ {Γ A}
+      -----------
+    → Γ ⊢ `List A
+
+  _`∷_ : ∀ {Γ A}
+    → Γ ⊢ A
+    → Γ ⊢ `List A
+      ------------
+    → Γ ⊢ `List A
+
+  caseL : ∀ {Γ A B}
+    → Γ ⊢ `List A
+    → Γ ⊢ B
+    → Γ , A , `List A ⊢ B
+      -------------------
+    → Γ ⊢ B
+
+
 lookup : Context → ℕ → Type
 lookup (Γ , A) zero     =  A
 lookup (Γ , _) (suc n)  =  lookup Γ n
@@ -213,7 +235,10 @@ rename ρ (`inj₂ N)      = `inj₂ (rename ρ N)
 rename ρ (case⊎ L M N)  = case⊎ (rename ρ L) (rename (ext ρ) M) (rename (ext ρ) N) 
 rename ρ (case⊥ L)      = case⊥ (rename ρ L)
 rename ρ (`tt)          = `tt
-
+rename ρ (`[])          = `[]
+rename ρ (H `∷ T)      = rename ρ H `∷ rename ρ T
+rename ρ (caseL L M N) = caseL (rename ρ L) (rename ρ M) (rename (ext (ext ρ)) N)
+ 
 
 exts : ∀ {Γ Δ} → (∀ {A} → Γ ∋ A → Δ ⊢ A) → (∀ {A B} → Γ , A ∋ B → Δ , A ⊢ B)
 exts σ Z      =  ` Z
@@ -239,6 +264,9 @@ subst σ (`inj₂ N)      =  `inj₂ (subst σ N)
 subst σ (case⊎ L M N)  =  case⊎ (subst σ L) (subst (exts σ) M) (subst (exts σ) N)
 subst σ (case⊥ L)      =  case⊥ (subst σ L)
 subst σ (`tt)          =  `tt
+subst σ (`[])          = `[]
+subst σ (H `∷ T)      = subst σ H `∷ subst σ T
+subst σ (caseL L M N) = caseL (subst σ L) (subst σ M) (subst (exts (exts σ)) N)
 
 substZero : ∀ {Γ}{A B} → Γ ⊢ A → Γ , A ∋ B → Γ ⊢ B
 substZero V Z      =  V
@@ -314,6 +342,18 @@ data Value : ∀ {Γ A} → Γ ⊢ A → Set where
   V-⊤ : ∀ {Γ}
       ---------
     → Value {Γ} `tt
+
+  -- list
+  
+  V-[] : ∀ {Γ A}
+      -----------------------
+    → Value {Γ} {`List A} `[]
+
+  V-∷ : ∀ {Γ A} {V : Γ ⊢ A} {VS : Γ ⊢ `List A}
+    → Value V
+    → Value VS
+      ---------------
+    → Value (V `∷ VS)
 
 
 infix 2 _—→_
@@ -475,7 +515,34 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
     → L —→ L′ 
       -------------------
     → case⊥ {A = A} L —→ case⊥ L′ 
-      
+
+  -- list
+
+  ξ-∷₁ : ∀ {Γ A} {M M′ : Γ ⊢ A} {N : Γ ⊢ `List A}
+    → M —→ M′
+      ------------------
+    → M `∷ N —→ M′ `∷ N
+
+  ξ-∷₂ : ∀ {Γ A} {M : Γ ⊢ A} {N N′ : Γ ⊢ `List A}
+    → N —→ N′
+      ------------------
+    → M `∷ N —→ M `∷ N′
+
+  ξ-caseL : ∀ {Γ A B} {L L′ : Γ ⊢ `List A} {M : Γ ⊢ B} {N : Γ , A , `List A ⊢ B}
+    → L —→ L′ 
+      ---------------------------
+    → caseL L M N —→ caseL L′ M N
+
+  β-[] : ∀ {Γ A B} {M : Γ ⊢ B} {N : Γ , A , `List A ⊢ B}
+      ---------------------------------------------------
+    → caseL `[] M N —→ M
+
+  β-∷ : ∀ {Γ A B} {V : Γ ⊢ A} {VS : Γ ⊢ `List A} {M : Γ ⊢ B} {N : Γ , A , `List A ⊢ B}
+    → Value V
+    → Value VS
+      ------------------------------------
+    → caseL (V `∷ VS) M N —→ N [ V ][ VS ]
+
 
 infix  2 _—↠_
 infix  1 begin_
@@ -505,14 +572,13 @@ V¬—→ : ∀ {Γ A} {M N : Γ ⊢ A}
   → Value M
     ----------
   → ¬ (M —→ N)
-V¬—→ V-ƛ          ()
-V¬—→ V-zero       ()
 V¬—→ (V-suc VM)   (ξ-suc M—→M′)          =  V¬—→ VM M—→M′
-V¬—→ V-con        ()
 V¬—→ V-⟨ VM , _ ⟩ (ξ-⟨,⟩₁ M—→M′)        =  V¬—→ VM M—→M′
 V¬—→ V-⟨ _ , VN ⟩ (ξ-⟨,⟩₂ _ N—→N′)      =  V¬—→ VN N—→N′
 V¬—→ {A = A `⊎ B} (V-inj₁ VV) (ξ-inj₁ s) = V¬—→ VV s
 V¬—→ {A = A `⊎ B} (V-inj₂ VW) (ξ-inj₂ s) = V¬—→ VW s
+V¬—→ {A = `List A} (V-∷ VV VVS) (ξ-∷₁ s) = V¬—→ VV s
+V¬—→ {A = `List A} (V-∷ VV VVS) (ξ-∷₂ s) = V¬—→ VVS s
 
 
 data Progress {A} (M : ∅ ⊢ A) : Set where
@@ -583,6 +649,17 @@ progress (case⊎ L M N) with progress L
 progress (case⊥ L) with progress L
 ...    | step s                             = step (ξ-case⊥ s)
 progress `tt                                = done V-⊤
+progress `[]                                = done V-[]
+progress (H `∷ T) with progress H
+...    | step s                             = step (ξ-∷₁ s)
+...    | done VH with progress T
+...       | step s                          = step (ξ-∷₂ s)
+...       | done VT                         = done (V-∷ VH VT)
+progress (caseL L M N) with progress L
+...    | step s                             = step (ξ-caseL s)
+...       | done V-[]                       = step β-[]
+...       | done (V-∷ VL VVS)               = step (β-∷ VL VVS)
+
 
 record Gas : Set where
   constructor gas
@@ -619,6 +696,7 @@ eval (gas (suc m)) L with progress L
 ... | step {M} L—→M with eval (gas m) M
 ...    | steps M—↠N fin                  =  steps (L —→⟨ L—→M ⟩ M—↠N) fin
 
+----------------------------------------------------------------------
 
 cube : ∅ ⊢ Nat ⇒ Nat
 cube = ƛ (# 0 `* # 0 `* # 0)
@@ -685,6 +763,13 @@ from×⊤ = ƛ (`proj₁ (# 0))
 
 -- eval (gas 100) (from×⊤ · (to×⊤ · (con 42)))
 
+mapL : {A B : Type} → ∅ ⊢ (A ⇒ B) ⇒ `List A ⇒ `List B
+mapL = μ ƛ ƛ caseL (# 0) `[] ((# 3 · # 1) `∷ (# 4 · # 3 · # 0))
+
+-- map "square"
+-- eval (gas 100) (mapL · (ƛ # 0 `* # 0) · (con 1 `∷ con 2 `∷ con 3 `∷ con 4 `∷ con 5 `∷ `[]))
+
+
 ----------------------------------------------------------------------
 
 -- [X] primitive numbers
@@ -695,4 +780,4 @@ from×⊤ = ƛ (`proj₁ (# 0))
 -- [X] unit type
 -- [ ] an alternative formulation of unit type
 -- [X] empty type
--- [ ] lists
+-- [X] lists
