@@ -30,6 +30,7 @@ data Type : Set where
   _`×_  : Type → Type → Type
   _`⊎_  : Type → Type → Type
   `⊥    : Type
+  `⊤    : Type
 
 data Context : Set where
   ∅   : Context
@@ -166,6 +167,11 @@ data _⊢_ : Context → Type → Set where
       ------
     → Γ ⊢ A
 
+  -- unit
+
+  `tt : ∀ {Γ}
+      -------
+    → Γ ⊢ `⊤
 
 lookup : Context → ℕ → Type
 lookup (Γ , A) zero     =  A
@@ -205,7 +211,8 @@ rename ρ (case× L M)    = case× (rename ρ L) (rename (ext (ext ρ)) M)
 rename ρ (`inj₁ M)      = `inj₁ (rename ρ M)
 rename ρ (`inj₂ N)      = `inj₂ (rename ρ N)
 rename ρ (case⊎ L M N)  = case⊎ (rename ρ L) (rename (ext ρ) M) (rename (ext ρ) N) 
-rename ρ (case⊥ L)    = case⊥ (rename ρ L)
+rename ρ (case⊥ L)      = case⊥ (rename ρ L)
+rename ρ (`tt)          = `tt
 
 
 exts : ∀ {Γ Δ} → (∀ {A} → Γ ∋ A → Δ ⊢ A) → (∀ {A B} → Γ , A ∋ B → Δ , A ⊢ B)
@@ -230,7 +237,8 @@ subst σ (case× L M)    =  case× (subst σ L) (subst (exts (exts σ)) M)
 subst σ (`inj₁ M)      =  `inj₁ (subst σ M)
 subst σ (`inj₂ N)      =  `inj₂ (subst σ N)
 subst σ (case⊎ L M N)  =  case⊎ (subst σ L) (subst (exts σ) M) (subst (exts σ) N)
-subst σ (case⊥ L)    =  case⊥ (subst σ L)
+subst σ (case⊥ L)      =  case⊥ (subst σ L)
+subst σ (`tt)          =  `tt
 
 substZero : ∀ {Γ}{A B} → Γ ⊢ A → Γ , A ∋ B → Γ ⊢ B
 substZero V Z      =  V
@@ -301,6 +309,11 @@ data Value : ∀ {Γ A} → Γ ⊢ A → Set where
     → Value W
       --------------
     → Value (`inj₂ {Γ} {A} {B} W) 
+
+  -- unit
+  V-⊤ : ∀ {Γ}
+      ---------
+    → Value {Γ} `tt
 
 
 infix 2 _—→_
@@ -569,6 +582,7 @@ progress (case⊎ L M N) with progress L
 ...    | done (V-inj₂ W)                    = step (β-inj₂ W)
 progress (case⊥ L) with progress L
 ...    | step s                             = step (ξ-case⊥ s)
+progress `tt                                = done V-⊤
 
 record Gas : Set where
   constructor gas
@@ -663,6 +677,13 @@ from⊎⊥ = ƛ (case⊎ (# 0) (# 0) (case⊥ (# 0)))
 -- eval (gas 100) (from⊎⊥ · (to⊎⊥ · (con 42)))
 -- eval (gas 100) (to⊎⊥ · (from⊎⊥ · `inj₁ (con 42)))
 
+to×⊤ : ∀ {A : Type} → ∅ ⊢ A ⇒ A `× `⊤
+to×⊤ = ƛ `⟨ # 0 , `tt ⟩
+
+from×⊤ : ∀ {A : Type} → ∅ ⊢ A `× `⊤ ⇒ A
+from×⊤ = ƛ (`proj₁ (# 0))
+
+-- eval (gas 100) (from×⊤ · (to×⊤ · (con 42)))
 
 ----------------------------------------------------------------------
 
@@ -671,7 +692,7 @@ from⊎⊥ = ƛ (case⊎ (# 0) (# 0) (case⊥ (# 0)))
 -- [X] products
 -- [X] an alternative formulation of products
 -- [X] sums
--- [ ] unit type
+-- [X] unit type
 -- [ ] an alternative formulation of unit type
--- [ ] empty type
+-- [X] empty type
 -- [ ] lists
