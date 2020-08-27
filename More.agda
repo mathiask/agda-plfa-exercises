@@ -29,6 +29,7 @@ data Type : Set where
   Nat   : Type
   _`×_  : Type → Type → Type
   _`⊎_  : Type → Type → Type
+  `⊥    : Type
 
 data Context : Set where
   ∅   : Context
@@ -158,6 +159,13 @@ data _⊢_ : Context → Type → Set where
       --------------
     → Γ ⊢ C
 
+  -- empty type
+  
+  case⊥ : ∀ {Γ A}
+    → Γ ⊢ `⊥
+      ------
+    → Γ ⊢ A
+
 
 lookup : Context → ℕ → Type
 lookup (Γ , A) zero     =  A
@@ -197,6 +205,7 @@ rename ρ (case× L M)    = case× (rename ρ L) (rename (ext (ext ρ)) M)
 rename ρ (`inj₁ M)      = `inj₁ (rename ρ M)
 rename ρ (`inj₂ N)      = `inj₂ (rename ρ N)
 rename ρ (case⊎ L M N)  = case⊎ (rename ρ L) (rename (ext ρ) M) (rename (ext ρ) N) 
+rename ρ (case⊥ L)    = case⊥ (rename ρ L)
 
 
 exts : ∀ {Γ Δ} → (∀ {A} → Γ ∋ A → Δ ⊢ A) → (∀ {A B} → Γ , A ∋ B → Δ , A ⊢ B)
@@ -221,6 +230,7 @@ subst σ (case× L M)    =  case× (subst σ L) (subst (exts (exts σ)) M)
 subst σ (`inj₁ M)      =  `inj₁ (subst σ M)
 subst σ (`inj₂ N)      =  `inj₂ (subst σ N)
 subst σ (case⊎ L M N)  =  case⊎ (subst σ L) (subst (exts σ) M) (subst (exts σ) N)
+subst σ (case⊥ L)    =  case⊥ (subst σ L)
 
 substZero : ∀ {Γ}{A B} → Γ ⊢ A → Γ , A ∋ B → Γ ⊢ B
 substZero V Z      =  V
@@ -446,6 +456,14 @@ data _—→_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
       ----------------------
     → case⊎ (`inj₂ W) M N —→ N [ W ]
 
+  -- empty type
+
+  ξ-case⊥ : ∀ {Γ A } {L L′ : Γ ⊢ `⊥}
+    → L —→ L′ 
+      -------------------
+    → case⊥ {A = A} L —→ case⊥ L′ 
+      
+
 infix  2 _—↠_
 infix  1 begin_
 infixr 2 _—→⟨_⟩_
@@ -546,10 +564,11 @@ progress (`inj₂ N) with progress N
 ...    | step s                             = step (ξ-inj₂ s)
 ...    | done VN                            = done (V-inj₂ VN)
 progress (case⊎ L M N) with progress L
-... | step s                                = step (ξ-case⊎ s)
-... | done (V-inj₁ V)                       = step (β-inj₁ V)
-... | done (V-inj₂ W)                       = step (β-inj₂ W)
-
+...    | step s                             = step (ξ-case⊎ s)
+...    | done (V-inj₁ V)                    = step (β-inj₁ V)
+...    | done (V-inj₂ W)                    = step (β-inj₂ W)
+progress (case⊥ L) with progress L
+...    | step s                             = step (ξ-case⊥ s)
 
 record Gas : Set where
   constructor gas
@@ -616,13 +635,42 @@ swap⊎ = ƛ case⊎ (# 0) (`inj₂ (# 0)) (`inj₁ (# 0))
 -- eval (gas 100) (swap⊎ · (`inj₁ (con 42)))
 -- eval (gas 100) (swap⊎ · (`inj₂ (con 42)))
 
+-- We can now "prove" ∅ ⊢ `⊥ ...
+non-terminating-absurdity : ∅ ⊢ `⊥
+non-terminating-absurdity = μ (` Z)
+-- ... but there are no values of this Type:
+
+⊥-consistency : ∀ {M : ∅ ⊢ `⊥} → ¬ Value M
+⊥-consistency ()
+
+to⊎⊥ : ∀ {A : Type} → ∅ ⊢ A ⇒ A `⊎ `⊥
+to⊎⊥ = ƛ (`inj₁ (# 0))
+
+⊥⊎to : ∀ {A : Type} → ∅ ⊢ A ⇒ `⊥ `⊎ A 
+⊥⊎to = ƛ (`inj₂ (# 0))
+
+-- eval (gas 100) (to⊎⊥ · (con 42))
+-- eval (gas 100) (⊥⊎to · (con 42))
+
+from⊎⊥ : ∀ {A : Type} → ∅ ⊢ A `⊎ `⊥ ⇒ A
+from⊎⊥ = ƛ (case⊎ (# 0) (# 0) (case⊥ (# 0)))
+
+⊥⊎from : ∀ {A : Type} → ∅ ⊢ `⊥ `⊎ A ⇒ A
+⊥⊎from = ƛ (case⊎ (# 0) (case⊥ (# 0)) (# 0))
+
+-- eval (gas 100) (from⊎⊥ · `inj₁ (con 42))
+-- eval (gas 100) (⊥⊎from · `inj₂ (con 42))
+-- eval (gas 100) (from⊎⊥ · (to⊎⊥ · (con 42)))
+-- eval (gas 100) (to⊎⊥ · (from⊎⊥ · `inj₁ (con 42)))
+
+
 ----------------------------------------------------------------------
 
 -- [X] primitive numbers
 -- [X] let bindings
 -- [X] products
 -- [X] an alternative formulation of products
--- [ ] sums
+-- [X] sums
 -- [ ] unit type
 -- [ ] an alternative formulation of unit type
 -- [ ] empty type
