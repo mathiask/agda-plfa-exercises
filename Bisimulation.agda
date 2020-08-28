@@ -33,6 +33,7 @@ data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
 
 
 -- BEGIN Commented out to speed up the rest
+--
 -- -- To show the equivalence of _~_ and † we need to define the relevant
 -- -- fragment of the language:
 
@@ -80,4 +81,23 @@ data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
 -- ~⇒≡ (M · N) (O · P) {relevant· RM RN} (M~O ~· N~P) = cong₂ _·_ (~⇒≡ M O M~O) ((~⇒≡ N P N~P))
 -- ~⇒≡ (`let M N) ((ƛ N′) · M′) {relevant-let RM RN} (~let M~M′ N~N′)
 --     = cong₂ _·_  (cong ƛ_ (~⇒≡ N N′ N~N′)) (~⇒≡ M M′ M~M′)
+--
 -- END
+
+~val : ∀ {Γ A} {M M† : Γ ⊢ A}
+  → M ~ M†
+  → Value M
+    --------
+  → Value M†
+~val ~`           ()
+~val (~ƛ ~N)      V-ƛ  =  V-ƛ
+~val (~L ~· ~M)   ()
+~val (~let ~M ~N) ()
+
+~val⁻¹ : ∀ {Γ A} {M M† : Γ ⊢ A}
+  → M ~ M†
+  → Value M†
+    --------
+  → Value M
+~val⁻¹ (~ƛ N~) V-ƛ = V-ƛ
+
