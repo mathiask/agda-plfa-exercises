@@ -1,3 +1,5 @@
+__ IMPLEMENTATION OF SIMULATION FOR THE ALTERNATIVE PRODUCT IS *NOT* FINISHED!
+
 module plfa.Bisimulation where
 
 import Relation.Binary.PropositionalEquality as Eq
@@ -9,13 +11,32 @@ infix  5 ~ƛ_
 infix  7 _~·_
 
 -- Auxiliary function needed for the simulation of the alternative product:
-fresh₃ : ∀ {Γ A B C F} → (Γ , A , B ⊢ C) → (Γ , F , A , B ⊢ C)
-fresh₃ ⊢C = rename σ ⊢C where
-  σ : ∀ {Γ A B C F} → Γ , A , B ∋ C → Γ , F , A , B ∋ C
-  σ Z = Z
-  σ (S Z) = S Z
-  σ (S (S Z)) = S (S (S Z))
-  σ (S (S (S x))) = S (S (S (S x)))
+
+fresh₃ : ∀ {Γ A B C F} → Γ , A , B ∋ C → Γ , F , A , B ∋ C
+fresh₃ Z = Z
+fresh₃ (S Z) = S Z
+fresh₃ (S (S x)) = (S (S (S x)))
+
+ρ-ext₃ : ∀ {Γ Δ A B F}
+         → (∀ {T} → Γ , A , B ∋ T → Δ , A , B ∋ T)
+         → (∀ {T} → Γ , F , A , B ∋ T → Δ , F , A , B ∋ T)
+ρ-ext₃ ρ Z = fresh₃ (ρ Z)
+ρ-ext₃ ρ (S Z) = fresh₃ (ρ (S Z))
+ρ-ext₃ ρ (S (S Z)) = S (S Z)
+ρ-ext₃ ρ (S (S (S x))) = fresh₃ (ρ (S (S x)))
+
+postulate 
+  rename-fresh₃ : ∀ {Γ A B C F}
+    → (ρ : ∀ {T} → Γ , A , B ∋ T → Γ , A , B ∋ T)
+    → (N : Γ , A , B ⊢ C)
+    → rename (ρ-ext₃ {F = F} ρ) (rename fresh₃ N) ≡ (rename fresh₃ (rename ρ N))
+
+postulate
+  ρ-fresh₃ : ∀ {Γ Δ A B N F} 
+      → (ρ : ∀ {T} → Γ ∋ T → Δ ∋ T)
+      → (⊢N : Γ , A , B ⊢ N)
+      → rename (ext (ext (ext ρ))) (rename (fresh₃ {F = F}) ⊢N)
+        ≡ rename (fresh₃ {F = F}) (rename (ext (ext ρ)) ⊢N)
 
 
 data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
@@ -44,8 +65,9 @@ data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
   ~casex : ∀ {Γ A B C} {L L† : Γ ⊢ A `× B} {N N† : Γ , A , B ⊢ C}
     → L ~ L†
     → N ~ N†
-      -----------------------------------------------------------------------------
-    → case× L N ~ `let (L†) (`let (`proj₁ (# 0)) (`let (`proj₂ (# 1)) (fresh₃ N†)))
+      ------------------------------------------------------------------------------------
+    → case× L N ~
+      `let (L†) (`let (`proj₁ (# 0)) (`let (`proj₂ (# 1)) (rename (fresh₃ {F = A `× B}) N†)))
 
 
 -- BEGIN Commented out to speed up the rest
@@ -125,21 +147,30 @@ data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
 ~rename ρ (~ƛ ~N)       =  ~ƛ (~rename (ext ρ) ~N)
 ~rename ρ (~L ~· ~M)    =  (~rename ρ ~L) ~· (~rename ρ ~M)
 ~rename ρ (~let ~M ~N)  = ~let (~rename ρ ~M) (~rename (ext ρ) ~N)
-~rename ρ {N} (~casex ~L ~N) = {!!}
+~rename ρ (~casex {A = A} {B = B} {L† = L†} {N† = N†} ~L ~N)
+  with cong
+    (λ x → `let (rename ρ L†) (`let (`proj₁ (` Z)) (`let (`proj₂ (` (S Z))) x)))
+    (ρ-fresh₃ {F = A `× B} ρ N†)
+... | refl = {!!}
 
--- case× (rename ρ L) (rename (ext (ext ρ)) N₁) ~
--- `let (rename ρ L†)
--- (`let (`proj₁ (` Z))
---  (`let (`proj₂ (` (S Z))) (rename (ext (ext (ext ρ))) (fresh₃ N†))))
 
-~exts : ∀ {Γ Δ}
-  → {σ  : ∀ {A} → Γ ∋ A → Δ ⊢ A}
-  → {σ† : ∀ {A} → Γ ∋ A → Δ ⊢ A}
-  → (∀ {A} → (x : Γ ∋ A) → σ x ~ σ† x)
-    --------------------------------------------------
-  → (∀ {A B} → (x : Γ , B ∋ A) → exts σ x ~ exts σ† x)
-~exts ~σ Z      =  ~`
-~exts ~σ (S x)  =  ~rename S_ (~σ x)
+
+-- postulate
+--   ρ-fresh₃ : ∀ {Γ Δ A B N F} 
+--       → (ρ : ∀ {T} → Γ ∋ T → Δ ∋ T)
+--       → (⊢N : Γ , A , B ⊢ N)
+--       → rename (ext (ext (ext ρ))) (rename (fresh₃ {F = F}) ⊢N)
+--         ≡ rename (fresh₃ {F = F}) (rename (ext (ext ρ)) ⊢N)
+
+
+-- ~exts : ∀ {Γ Δ}
+--   → {σ  : ∀ {A} → Γ ∋ A → Δ ⊢ A}
+--   → {σ† : ∀ {A} → Γ ∋ A → Δ ⊢ A}
+--   → (∀ {A} → (x : Γ ∋ A) → σ x ~ σ† x)
+--     --------------------------------------------------
+--   → (∀ {A B} → (x : Γ , B ∋ A) → exts σ x ~ exts σ† x)
+-- ~exts ~σ Z      =  ~`
+-- ~exts ~σ (S x)  =  ~rename S_ (~σ x)
 
 -- ~subst : ∀ {Γ Δ}
 --   → {σ  : ∀ {A} → Γ ∋ A → Δ ⊢ A}
