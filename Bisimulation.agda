@@ -8,6 +8,16 @@ infix  4 _~_
 infix  5 ~ƛ_
 infix  7 _~·_
 
+-- Auxiliary function needed for the simulation of the alternative product:
+fresh₃ : ∀ {Γ A B C F} → (Γ , A , B ⊢ C) → (Γ , F , A , B ⊢ C)
+fresh₃ ⊢C = rename σ ⊢C where
+  σ : ∀ {Γ A B C F} → Γ , A , B ∋ C → Γ , F , A , B ∋ C
+  σ Z = Z
+  σ (S Z) = S Z
+  σ (S (S Z)) = S (S (S Z))
+  σ (S (S (S x))) = S (S (S (S x)))
+
+
 data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
 
   ~` : ∀ {Γ A} {x : Γ ∋ A}
@@ -30,6 +40,12 @@ data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
     → N ~ N†
       ----------------------
     → `let M N ~ (ƛ N†) · M†
+
+  ~casex : ∀ {Γ A B C} {L L† : Γ ⊢ A `× B} {N N† : Γ , A , B ⊢ C}
+    → L ~ L†
+    → N ~ N†
+      -----------------------------------------------------------------------------
+    → case× L N ~ `let (L†) (`let (`proj₁ (# 0)) (`let (`proj₂ (# 1)) (fresh₃ N†)))
 
 
 -- BEGIN Commented out to speed up the rest
@@ -108,7 +124,13 @@ data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
 ~rename ρ (~`)          =  ~`
 ~rename ρ (~ƛ ~N)       =  ~ƛ (~rename (ext ρ) ~N)
 ~rename ρ (~L ~· ~M)    =  (~rename ρ ~L) ~· (~rename ρ ~M)
-~rename ρ (~let ~M ~N)  =  ~let (~rename ρ ~M) (~rename (ext ρ) ~N)
+~rename ρ (~let ~M ~N)  = ~let (~rename ρ ~M) (~rename (ext ρ) ~N)
+~rename ρ {N} (~casex ~L ~N) = {!!}
+
+-- case× (rename ρ L) (rename (ext (ext ρ)) N₁) ~
+-- `let (rename ρ L†)
+-- (`let (`proj₁ (` Z))
+--  (`let (`proj₂ (` (S Z))) (rename (ext (ext (ext ρ))) (fresh₃ N†))))
 
 ~exts : ∀ {Γ Δ}
   → {σ  : ∀ {A} → Γ ∋ A → Δ ⊢ A}
@@ -119,72 +141,75 @@ data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
 ~exts ~σ Z      =  ~`
 ~exts ~σ (S x)  =  ~rename S_ (~σ x)
 
-~subst : ∀ {Γ Δ}
-  → {σ  : ∀ {A} → Γ ∋ A → Δ ⊢ A}
-  → {σ† : ∀ {A} → Γ ∋ A → Δ ⊢ A}
-  → (∀ {A} → (x : Γ ∋ A) → σ x ~ σ† x)
-    ---------------------------------------------------------
-  → (∀ {A} {M M† : Γ ⊢ A} → M ~ M† → subst σ M ~ subst σ† M†)
-~subst ~σ (~` {x = x})  =  ~σ x
-~subst ~σ (~ƛ ~N)       =  ~ƛ (~subst (~exts ~σ) ~N)
-~subst ~σ (~L ~· ~M)    =  (~subst ~σ ~L) ~· (~subst ~σ ~M)
-~subst ~σ (~let ~M ~N)  =  ~let (~subst ~σ ~M) (~subst (~exts ~σ) ~N)
+-- ~subst : ∀ {Γ Δ}
+--   → {σ  : ∀ {A} → Γ ∋ A → Δ ⊢ A}
+--   → {σ† : ∀ {A} → Γ ∋ A → Δ ⊢ A}
+--   → (∀ {A} → (x : Γ ∋ A) → σ x ~ σ† x)
+--     ---------------------------------------------------------
+--   → (∀ {A} {M M† : Γ ⊢ A} → M ~ M† → subst σ M ~ subst σ† M†)
+-- ~subst ~σ (~` {x = x})  =  ~σ x
+-- ~subst ~σ (~ƛ ~N)       =  ~ƛ (~subst (~exts ~σ) ~N)
+-- ~subst ~σ (~L ~· ~M)    =  (~subst ~σ ~L) ~· (~subst ~σ ~M)
+-- ~subst ~σ (~let ~M ~N)  =  ~let (~subst ~σ ~M) (~subst (~exts ~σ) ~N)
 
-~sub : ∀ {Γ A B} {N N† : Γ , B ⊢ A} {M M† : Γ ⊢ B}
-  → N ~ N†
-  → M ~ M†
-    -----------------------
-  → (N [ M ]) ~ (N† [ M† ])
-~sub {Γ} {A} {B} ~N ~M = ~subst {Γ , B} {Γ} ~σ {A} ~N
-  where
-  ~σ : ∀ {A} → (x : Γ , B ∋ A) → _ ~ _
-  ~σ Z      =  ~M
-  ~σ (S x)  =  ~`
-
-
-data Leg {Γ A} (M† N : Γ ⊢ A) : Set where
-
-  leg : ∀ {N† : Γ ⊢ A}
-    → N ~ N†
-    → M† —→ N†
-      --------
-    → Leg M† N
+-- ~sub : ∀ {Γ A B} {N N† : Γ , B ⊢ A} {M M† : Γ ⊢ B}
+--   → N ~ N†
+--   → M ~ M†
+--     -----------------------
+--   → (N [ M ]) ~ (N† [ M† ])
+-- ~sub {Γ} {A} {B} ~N ~M = ~subst {Γ , B} {Γ} ~σ {A} ~N
+--   where
+--   ~σ : ∀ {A} → (x : Γ , B ∋ A) → _ ~ _
+--   ~σ Z      =  ~M
+--   ~σ (S x)  =  ~`
 
 
-sim : ∀ {Γ A} {M M† N : Γ ⊢ A}
-  → M ~ M†
-  → M —→ N
-    --------
-  → Leg M† N
-sim (~L ~· ~M) (ξ-·₁ L→) with sim ~L L→
-... | leg ~L′ L†→                          = leg (~L′ ~· ~M) (ξ-·₁ L†→)
-sim (~V ~· ~M) (ξ-·₂ VV M→) with sim ~M M→
-... | leg ~M′ M†→                          = leg (~V ~· ~M′) (ξ-·₂ (~val ~V VV) M†→)
-sim ((~ƛ ~N) ~· ~V) (β-ƛ VV)               = leg (~sub ~N ~V) (β-ƛ (~val ~V VV))
-sim (~let ~M ~N) (ξ-let M→) with sim ~M M→
-... | leg ~M′ M†→                          = leg (~let ~M′ ~N) (ξ-·₂ V-ƛ M†→)
-sim (~let ~V ~N) (β-let VV) = leg (~sub ~N ~V) (β-ƛ (~val ~V VV))
+-- data Leg {Γ A} (M† N : Γ ⊢ A) : Set where
+
+--   leg : ∀ {N† : Γ ⊢ A}
+--     → N ~ N†
+--     → M† —→ N†
+--       --------
+--     → Leg M† N
 
 
-data ULeg {Γ A} (M N† : Γ ⊢ A) : Set where
+-- sim : ∀ {Γ A} {M M† N : Γ ⊢ A}
+--   → M ~ M†
+--   → M —→ N
+--     --------
+--   → Leg M† N
+-- sim (~L ~· ~M) (ξ-·₁ L→) with sim ~L L→
+-- ... | leg ~L′ L†→                          = leg (~L′ ~· ~M) (ξ-·₁ L†→)
+-- sim (~V ~· ~M) (ξ-·₂ VV M→) with sim ~M M→
+-- ... | leg ~M′ M†→                          = leg (~V ~· ~M′) (ξ-·₂ (~val ~V VV) M†→)
+-- sim ((~ƛ ~N) ~· ~V) (β-ƛ VV)               = leg (~sub ~N ~V) (β-ƛ (~val ~V VV))
+-- sim (~let ~M ~N) (ξ-let M→) with sim ~M M→
+-- ... | leg ~M′ M†→                          = leg (~let ~M′ ~N) (ξ-·₂ V-ƛ M†→)
+-- sim (~let ~V ~N) (β-let VV) = leg (~sub ~N ~V) (β-ƛ (~val ~V VV))
 
-  uleg : ∀ {N : Γ ⊢ A}
-    → N ~ N†
-    → M —→ N
-      ---------
-    → ULeg M N†
+
+-- data ULeg {Γ A} (M N† : Γ ⊢ A) : Set where
+
+--   uleg : ∀ {N : Γ ⊢ A}
+--     → N ~ N†
+--     → M —→ N
+--       ---------
+--     → ULeg M N†
 
 
-sim⁻¹ : ∀ {Γ A} {M M† N† : Γ ⊢ A}
-  → M ~ M†
-  → M† —→ N†
-    ---------
-  → ULeg M N†
-sim⁻¹ (~L ~· ~M) (ξ-·₁ L†→) with sim⁻¹ ~L L†→
-... | uleg ~L′ L→ = uleg (~L′ ~· ~M) (ξ-·₁ L→)
-sim⁻¹ (~V ~· ~M) (ξ-·₂ VL† M†→) with sim⁻¹ ~M M†→
-... | uleg ~M′ M→ = uleg (~V ~· ~M′) (ξ-·₂ (~val⁻¹ ~V VL†) M→)
-sim⁻¹ ((~ƛ ~N) ~· ~V) (β-ƛ VV) = uleg (~sub ~N ~V) (β-ƛ (~val⁻¹ ~V VV))
-sim⁻¹ (~let ~M ~N) (ξ-·₂ Vƛ M†→) with sim⁻¹ ~M M†→
-... | uleg ~M′ M→ = uleg (~let ~M′ ~N) (ξ-let M→)
-sim⁻¹ (~let ~V ~N) (β-ƛ VV) = uleg (~sub ~N ~V) (β-let (~val⁻¹ ~V VV))
+-- sim⁻¹ : ∀ {Γ A} {M M† N† : Γ ⊢ A}
+--   → M ~ M†
+--   → M† —→ N†
+--     ---------
+--   → ULeg M N†
+-- sim⁻¹ (~L ~· ~M) (ξ-·₁ L†→) with sim⁻¹ ~L L†→
+-- ... | uleg ~L′ L→ = uleg (~L′ ~· ~M) (ξ-·₁ L→)
+-- sim⁻¹ (~V ~· ~M) (ξ-·₂ VL† M†→) with sim⁻¹ ~M M†→
+-- ... | uleg ~M′ M→ = uleg (~V ~· ~M′) (ξ-·₂ (~val⁻¹ ~V VL†) M→)
+-- sim⁻¹ ((~ƛ ~N) ~· ~V) (β-ƛ VV) = uleg (~sub ~N ~V) (β-ƛ (~val⁻¹ ~V VV))
+-- sim⁻¹ (~let ~M ~N) (ξ-·₂ Vƛ M†→) with sim⁻¹ ~M M†→
+-- ... | uleg ~M′ M→ = uleg (~let ~M′ ~N) (ξ-let M→)
+-- sim⁻¹ (~let ~V ~N) (β-ƛ VV) = uleg (~sub ~N ~V) (β-let (~val⁻¹ ~V VV))
+
+----------------------------------------------------------------------
+
