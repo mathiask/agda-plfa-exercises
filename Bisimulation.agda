@@ -1,4 +1,4 @@
-__ IMPLEMENTATION OF SIMULATION FOR THE ALTERNATIVE PRODUCT IS *NOT* FINISHED!
+-- IMPLEMENTATION OF SIMULATION FOR THE ALTERNATIVE PRODUCT IS *NOT* FINISHED!
 
 module plfa.Bisimulation where
 
@@ -151,7 +151,7 @@ data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
   with cong
     (λ x → `let (rename ρ L†) (`let (`proj₁ (` Z)) (`let (`proj₂ (` (S Z))) x)))
     (ρ-fresh₃ {F = A `× B} ρ N†)
-... | refl = {!!}
+... | x = {!!}
 
 
 
