@@ -17,26 +17,21 @@ fresh₃ Z = Z
 fresh₃ (S Z) = S Z
 fresh₃ (S (S x)) = (S (S (S x)))
 
-ρ-ext₃ : ∀ {Γ Δ A B F}
-         → (∀ {T} → Γ , A , B ∋ T → Δ , A , B ∋ T)
-         → (∀ {T} → Γ , F , A , B ∋ T → Δ , F , A , B ∋ T)
-ρ-ext₃ ρ Z = fresh₃ (ρ Z)
-ρ-ext₃ ρ (S Z) = fresh₃ (ρ (S Z))
-ρ-ext₃ ρ (S (S Z)) = S (S Z)
-ρ-ext₃ ρ (S (S (S x))) = fresh₃ (ρ (S (S x)))
+-- NOT NEEDED
+--
+-- ρ-ext₃ : ∀ {Γ Δ A B F}
+--          → (∀ {T} → Γ , A , B ∋ T → Δ , A , B ∋ T)
+--          → (∀ {T} → Γ , F , A , B ∋ T → Δ , F , A , B ∋ T)
+-- ρ-ext₃ ρ Z = fresh₃ (ρ Z)
+-- ρ-ext₃ ρ (S Z) = fresh₃ (ρ (S Z))
+-- ρ-ext₃ ρ (S (S Z)) = S (S Z)
+-- ρ-ext₃ ρ (S (S (S x))) = fresh₃ (ρ (S (S x)))
 
-postulate 
-  rename-fresh₃ : ∀ {Γ A B C F}
-    → (ρ : ∀ {T} → Γ , A , B ∋ T → Γ , A , B ∋ T)
-    → (N : Γ , A , B ⊢ C)
-    → rename (ρ-ext₃ {F = F} ρ) (rename fresh₃ N) ≡ (rename fresh₃ (rename ρ N))
-
-postulate
-  ρ-fresh₃ : ∀ {Γ Δ A B N F} 
-      → (ρ : ∀ {T} → Γ ∋ T → Δ ∋ T)
-      → (⊢N : Γ , A , B ⊢ N)
-      → rename (ext (ext (ext ρ))) (rename (fresh₃ {F = F}) ⊢N)
-        ≡ rename (fresh₃ {F = F}) (rename (ext (ext ρ)) ⊢N)
+-- postulate
+--   rename-fresh₃ : ∀ {Γ A B C F}
+--     → (ρ : ∀ {T} → Γ , A , B ∋ T → Γ , A , B ∋ T)
+--     → (N : Γ , A , B ⊢ C)
+--     → rename (ρ-ext₃ {F = F} ρ) (rename fresh₃ N) ≡ (rename fresh₃ (rename ρ N))
 
 
 data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
@@ -139,6 +134,15 @@ data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
   → Value M
 ~val⁻¹ (~ƛ N~) V-ƛ = V-ƛ
 
+
+postulate
+  ρ-fresh₃ : ∀ {Γ Δ A B N F}
+      → (ρ : ∀ {T} → Γ ∋ T → Δ ∋ T)
+      → (⊢N : Γ , A , B ⊢ N)
+      → rename (ext (ext (ext ρ))) (rename (fresh₃ {F = F}) ⊢N)
+        ≡ rename (fresh₃ {F = F}) (rename (ext (ext ρ)) ⊢N)
+
+
 ~rename : ∀ {Γ Δ}
   → (ρ : ∀ {A} → Γ ∋ A → Δ ∋ A)
     ----------------------------------------------------------
@@ -154,13 +158,6 @@ data _~_ : ∀ {Γ A} → (Γ ⊢ A) → (Γ ⊢ A) → Set where
 ... | x = {!!}
 
 
-
--- postulate
---   ρ-fresh₃ : ∀ {Γ Δ A B N F} 
---       → (ρ : ∀ {T} → Γ ∋ T → Δ ∋ T)
---       → (⊢N : Γ , A , B ⊢ N)
---       → rename (ext (ext (ext ρ))) (rename (fresh₃ {F = F}) ⊢N)
---         ≡ rename (fresh₃ {F = F}) (rename (ext (ext ρ)) ⊢N)
 
 
 -- ~exts : ∀ {Γ Δ}
